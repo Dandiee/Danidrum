@@ -1,0 +1,128 @@
+﻿<UserControl x:Class="Danidrum.UserControls.NoteHighwayControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:viewmodels="clr-namespace:Danidrum.ViewModels"
+             xmlns:local="clr-namespace:Danidrum.UserControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Column 0: Lane Names -->
+        <ScrollViewer Grid.Column="0"
+                      x:Name="LaneNameScroller"
+                      VerticalScrollBarVisibility="Hidden"
+                      HorizontalScrollBarVisibility="Hidden"
+                      HorizontalAlignment="Stretch"
+                      ScrollChanged="LaneNameScroller_ScrollChanged">
+            <ItemsControl ItemsSource="{Binding NoteLanes}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type viewmodels:NoteLaneViewModel}">
+                        <Border Height="{Binding LaneHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}" 
+                                BorderBrush="{DynamicResource MaterialDesign.Brush.OutlineVariant}"
+                                BorderThickness="0,0,1,1">
+                            <TextBlock Text="{Binding LaneName}" 
+                                       Style="{StaticResource MaterialDesignBody1TextBlock}"
+                                       VerticalAlignment="Center"
+                                       Margin="10,0"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Column 1: Main Highway -->
+        <Grid Grid.Column="1">
+
+            <ScrollViewer x:Name="NoteCanvasScroller"
+                          SizeChanged="NoteCanvasScroller_SizeChanged"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto"
+                          ScrollChanged="NoteCanvasScroller_ScrollChanged"
+                          CanContentScroll="False">
+                <Grid>
+
+                    <!-- BAR LINES (drawn behind notes) -->
+                    <ItemsControl ItemsSource="{Binding Bars}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <!-- Canvas full width so bar X positions are absolute -->
+                                <Canvas Background="Transparent"
+                                        Width="{Binding SongTotalWidth, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
+                                        Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type viewmodels:BarViewModel}">
+                                <!-- thin vertical line; height stretched via container canvas -->
+                                <Rectangle Width="2"
+                                           Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
+                                           Fill="Blue"
+                                           Opacity="0.6"
+                                           IsHitTestVisible="False"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                <Setter Property="Canvas.Top" Value="0" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
+
+                    <!-- NOTE LANES -->
+                    <ItemsControl ItemsSource="{Binding NoteLanes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type viewmodels:NoteLaneViewModel}">
+                                <ItemsControl ItemsSource="{Binding Notes}" 
+                                              BorderThickness="0 0 0 1" BorderBrush="White"
+                                              Height="{Binding LaneHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}" 
+                                              ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas Background="{DynamicResource MaterialDesign.Brush.SurfaceVariant}"
+                                                    Margin="0 5 0 0"
+                                                    Width="{Binding SongTotalWidth, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type viewmodels:NoteViewModel}">
+                                            <Rectangle Fill="{DynamicResource MaterialDesign.Brush.Primary}"
+                                                       Height="{Binding NoteHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
+                                                       Width="{Binding CanvasWidth}"
+                                                       RadiusX="3" RadiusY="3"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding CanvasLeft}" />
+                                            <Setter Property="VerticalAlignment" Value="Center" />
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                </ItemsControl>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                </Grid>
+            </ScrollViewer>
+
+            <!-- Center playhead -->
+            <Border Width="2"
+                    Background="Red"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Stretch"
+                    IsHitTestVisible="False" />
+
+        </Grid>
+    </Grid>
+</UserControl>
