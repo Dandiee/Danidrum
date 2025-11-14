@@ -19,7 +19,7 @@ public class PlaybackService
     private DryWetMidiFile _dryWetMidiFile;
     private int _nextEventIndex;
     private TempoMap _tempoMap;
-
+    private HashSet<int> _mutedChannels;
     public event Action<long> PositionChanged;
     public event Action<bool>? PlaybackStateChanged;
 
@@ -43,25 +43,30 @@ public class PlaybackService
         _totalSongDurationInMs = (long)((MetricTimeSpan)_dryWetMidiFile.GetDuration(TimeSpanType.Metric)).TotalMilliseconds;
 
 
-        var mutedChannels = tracks
-            .Where(t => t.IsMuted)
-            .Select(t => t.ChannelId)
-            .ToHashSet();
+        //var mutedChannels = tracks
+        //    .Where(t => t.IsMuted)
+        //    .Select(t => t.ChannelId)
+        //    .ToHashSet();
 
         _backingTrackEvents = _dryWetMidiFile.GetTimedEvents()
-            .Where(e =>
-            {
-                if (e.Event is ChannelEvent channelEvent)
-                {
-                    return !mutedChannels.Contains(channelEvent.Channel);
-                }
-                return true;
-            })
+            //.Where(e =>
+            //{
+            //    if (e.Event is ChannelEvent channelEvent)
+            //    {
+            //        return !mutedChannels.Contains(channelEvent.Channel);
+            //    }
+            //    return true;
+            //})
             .OrderBy(e => e.Time)
             .ToList();
 
         _nextEventIndex = 0;
         _seekOffsetMs = 0;
+    }
+
+    public void UpdateMuteList(HashSet<int> mutedChannels)
+    {
+        _mutedChannels = mutedChannels;
     }
 
     public void Start()
@@ -186,11 +191,20 @@ public class PlaybackService
             while (_nextEventIndex < _backingTrackEvents.Count)
             {
                 var timedEvent = _backingTrackEvents[_nextEventIndex];
+               
                 var eventTimeMs = timedEvent.TimeAs<MetricTimeSpan>(_tempoMap).TotalMilliseconds;
 
                 if (eventTimeMs <= currentTimeMs)
                 {
-                    _outputDevice.SendEvent(timedEvent.Event);
+
+                    if (timedEvent.Event is ChannelEvent channelEvent)
+                    {
+                        if (_mutedChannels == null || !_mutedChannels.Contains(channelEvent.Channel))
+                        {
+                            _outputDevice.SendEvent(timedEvent.Event);
+                        }
+                    }
+                    
                     _nextEventIndex++;
                 }
                 else break;

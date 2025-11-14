@@ -108,12 +108,14 @@ public partial class NoteHighwayControl : UserControl
     // Helper: pixels per millisecond (shared conversion)
     private double PxPerMs => PixelsPerSecond / 1000.0;
 
-    private void UpdateLaneSizes()
+    private void UpdateLaneSizes(Size newSize)
     {
         // Prefer viewport height if available, else fallback to ActualHeight
         double totalHeight = NoteCanvasScroller?.ViewportHeight > 0
             ? NoteCanvasScroller.ViewportHeight
             : ActualHeight;
+
+        totalHeight = newSize.Height;
 
         if (LanesCount <= 0) return;
 
@@ -125,7 +127,7 @@ public partial class NoteHighwayControl : UserControl
     private void NoteCanvasScroller_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         // Update lane sizes based on viewport
-        UpdateLaneSizes();
+        UpdateLaneSizes(e.NewSize);
 
         // Update padding so content won't be clipped at edges (optional small left padding)
         // Keeping left padding 0 keeps absolute pixel mapping simple.

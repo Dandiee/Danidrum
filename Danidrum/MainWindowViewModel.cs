@@ -44,11 +44,6 @@ public partial class MainWindowViewModel : ObservableObject
         _playbackService.PlaybackStateChanged += isPlaying => IsPlaying = isPlaying;
     }
 
-    private void OnCurrentSongPositionMsChanged()
-    {
-
-    }
-
     private void OnPlaybackPositionChanged(long currentTimeMs)
     {
         Application.Current?.Dispatcher?.Invoke(() =>
@@ -98,7 +93,6 @@ public partial class MainWindowViewModel : ObservableObject
                 int channelId = changedTrack.ChannelId;
                 bool newState = changedTrack.IsMuted;
 
-                // Sync all other tracks on the same channel
                 foreach (var track in Tracks.Where(t => t.ChannelId == channelId))
                 {
                     track.IsMuted = newState;
@@ -106,9 +100,8 @@ public partial class MainWindowViewModel : ObservableObject
 
                 _isUpdatingMutes = false;
 
-                await _playbackService.StopPlayback();
-                
-                _playbackService.Start();
+                var mutedChannels = Tracks.Where(e => e.IsMuted).Select(e => e.ChannelId).ToHashSet();
+                _playbackService.UpdateMuteList(mutedChannels);
             }
             finally
             {
@@ -125,18 +118,6 @@ public partial class MainWindowViewModel : ObservableObject
         await LoadMidiFileAsync(@"c:\Users\koczu\Downloads\Nirvana-Come As You Are-11-11-2025.mid");
         IsLoading = false;
     }
-
-    private async void OnTracksPropertyChanged(object sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(TrackInfo.IsMuted))
-        {
-            await StopPlayback();
-            _playbackService.InitializePlaybackEngine(_dryWetMidiFile, Tracks);
-            StartPlayback();
-        }
-    }
-
-
 
 
     private void ProcessSelectedTrack()
