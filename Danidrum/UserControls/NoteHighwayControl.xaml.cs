@@ -30,6 +30,7 @@ public partial class NoteHighwayControl
 {
     public static double PixelPerSecond = 300;
     public static double PixelPerMs = PixelPerSecond / 1000;
+    public static double VisualLatency = 400;
 
     public NoteHighwayControl()
     {
@@ -141,7 +142,7 @@ public partial class NoteHighwayControl
 
         if (control.NoteCanvasScroller == null || control.Chunk == null || control.Chunk.Song.LengthMs == 0) return;
 
-        var ratio = control.CurrentTimeMs / control.Chunk.Song.LengthMs;
+        var ratio = (control.CurrentTimeMs - VisualLatency) / control.Chunk.Song.LengthMs;
         var here = (control.NoteCanvasScroller.ExtentWidth - control.NoteCanvasScroller.ActualWidth / 2) * ratio;
         control.NoteCanvasScroller.ScrollToHorizontalOffset(here);
     }

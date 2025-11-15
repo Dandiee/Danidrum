@@ -166,6 +166,7 @@ public class PlaybackService
                         if (_mutedChannels == null || !_mutedChannels.Contains(channelEvent.Channel))
                         {
                             _outputDevice.SendEvent(note.TimedEvent.Event);
+                            note.Lane.StateChanged?.Invoke(this, EventArgs.Empty);
                         }
                     }
                     

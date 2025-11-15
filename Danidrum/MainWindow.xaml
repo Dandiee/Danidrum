@@ -151,8 +151,9 @@
                 </Grid.ColumnDefinitions>
 
                 <Slider x:Name="PositionSlider"
+                        Grid.Column="0"
                         Minimum="0"
-                        Maximum="{Binding TotalSongDurationMs}"
+                        Maximum="{Binding Song.LengthMs}"
                         Value="{Binding CurrentSongPositionMs}"
                         Style="{StaticResource MaterialDesign3.MaterialDesignSlider}">
 

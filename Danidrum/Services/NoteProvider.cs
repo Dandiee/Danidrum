@@ -1,5 +1,4 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Danidrum.ViewModels;
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
@@ -134,6 +133,7 @@ public class LaneContext
     public SevenBitNumber NoteNumber { get; }
     public string Name { get; }
     public IReadOnlyList<NoteContext> Notes {get;}
+    public EventHandler StateChanged { get; set; }
 
     public LaneContext(ChunkContext chunk, SevenBitNumber noteNumber, IReadOnlyList<Note> notes)
     {

@@ -20,6 +20,7 @@ public class NoteLaneControl : FrameworkElement
         NoteBrush = FindResource("MaterialDesign.Brush.Primary") as SolidColorBrush;
         NoteBrush.Freeze();
 
+        lane.StateChanged += (_, _) => Dispatcher.Invoke(InvalidateVisual);
 
         RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
         SnapsToDevicePixels = true;
