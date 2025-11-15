@@ -4,6 +4,8 @@ using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
 using System.Security.Permissions;
 using System.Threading.Channels;
+using System.Windows.Forms;
+using static Danidrum.MainWindowViewModel;
 using DryWetMidiFile = Melanchall.DryWetMidi.Core.MidiFile;
 
 namespace Danidrum.Services;
@@ -160,6 +162,8 @@ public partial class ChunkContext : ObservableObject
 
     [ObservableProperty] private bool _isMuted = false;
 
+    private readonly IReadOnlyDictionary<SevenBitNumber, LaneContext> _lanesByNumbers;
+
     public ChunkContext(ChannelContext channel, TrackChunk trackChunk)
     {
         Channel = channel;
@@ -174,7 +178,20 @@ public partial class ChunkContext : ObservableObject
 
         var notesByNumbers = notes.GroupBy(e => e.NoteNumber);
         Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList())).ToList();
+        _lanesByNumbers = Lanes.ToDictionary(e => e.NoteNumber);
     }
+
+    public bool TryGetLane(SevenBitNumber noteNumber, out LaneContext lane)
+    {
+        if (_lanesByNumbers.TryGetValue(noteNumber, out var cachedLane))
+        {
+            lane = cachedLane;
+            return true;
+        }
+
+        lane = null;
+        return false;
+    } 
 }
 
 public class LaneContext
@@ -184,6 +201,7 @@ public class LaneContext
     public string Name { get; }
     public IReadOnlyList<NoteContext> Notes {get;}
     public EventHandler StateChanged { get; set; }
+    public EventHandler<InputArg> InputReceived { get; set; }
 
     public LaneContext(ChunkContext chunk, SevenBitNumber noteNumber, IReadOnlyList<Note> notes)
     {

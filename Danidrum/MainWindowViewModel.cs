@@ -5,6 +5,7 @@ using Danidrum.Services;
 using Melanchall.DryWetMidi.Interaction;
 using Melanchall.DryWetMidi.Multimedia;
 using System.Windows.Media;
+using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 
 namespace Danidrum;
@@ -138,21 +139,16 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OnMidiEvent(object sender, MidiEventReceivedEventArgs e)
     {
-        var midiEvent = e.Event;
-
-        if (midiEvent is NoteOnEvent noteOn)
+        if (e.Event is NoteOnEvent noteOn)
         {
-            int note = noteOn.NoteNumber;
-            int velocity = noteOn.Velocity;
-
-            // Process drum hit
-            Console.WriteLine($"Hit: {note} velocity {velocity}");
-        }
-        else if (midiEvent is ControlChangeEvent cc)
-        {
-            Console.WriteLine($"CC {cc.ControlNumber} value {cc.ControlValue}");
+            if (SelectedChunk.TryGetLane(noteOn.NoteNumber, out var lane))
+            {
+                lane.InputReceived?.Invoke(this, new InputArg(noteOn.NoteNumber, _currentSongPositionMs));
+            }
         }
     }
+
+    public record InputArg(SevenBitNumber NoteNumber, double TimeInMs);
 
 
     [RelayCommand]
