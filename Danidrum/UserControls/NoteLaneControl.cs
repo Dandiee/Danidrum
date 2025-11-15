@@ -41,7 +41,7 @@ public class NoteLaneControl : FrameworkElement
                 rectangle: new Rect(
                     x: (note.StartTimeMs - note.DurationMs/2) * NoteHighwayControl.PixelPerMs + 5,
                     y: 5,
-                    width: note.DurationMs * NoteHighwayControl.PixelPerMs - 10,
+                    width: Math.Max(5, note.DurationMs * NoteHighwayControl.PixelPerMs - 10),
                     height: height - 5)
                 , 5, 5);
         }

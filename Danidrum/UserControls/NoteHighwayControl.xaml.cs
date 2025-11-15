@@ -98,7 +98,18 @@ public partial class NoteHighwayControl
                     Stroke = Brushes.DarkGray,
                 });
             }
+
+            var measureInfo = new TextBlock
+            {
+                Text = $"{measure.MeasureIndex}. [{measure.TimeSignature.Numerator}/{measure.TimeSignature.Denominator}]",
+            };
+            backgroundCanvas.Children.Add(measureInfo);
+            Canvas.SetLeft(measureInfo, measurePosition + 10);
+            Canvas.SetTop(measureInfo, 0);
         }
+
+        LanesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) });
+        LaneNamesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) });
 
         var laneNameTemplate = TryFindResource("LaneNameTemplate") as DataTemplate;
         var laneHeight = ActualHeight / Chunk.Lanes.Count;
@@ -114,7 +125,7 @@ public partial class NoteHighwayControl
             {
                 Height = laneHeight
             };
-            Grid.SetRow(laneControl, i);
+            Grid.SetRow(laneControl, i + 1);
             LanesGrid.Children.Add(laneControl);
             
             var titleHost = new ContentControl
@@ -125,7 +136,7 @@ public partial class NoteHighwayControl
                 Height = laneHeight
             };
 
-            Grid.SetRow(titleHost, i);
+            Grid.SetRow(titleHost, i + 1);
             LaneNamesGrid.Children.Add(titleHost);
         }
     }
