@@ -75,13 +75,13 @@ public partial class NoteHighwayControl
         LaneNamesGrid.RowDefinitions.Clear();
         LaneNamesGrid.Children.Clear();
 
-        LanesGrid.Width = PixelPerMs * Chunk.Song.LengthMs;
+        LanesGrid.Width = PixelPerMs * Chunk.Channel.Song.LengthMs;
 
         var backgroundCanvas = new Canvas();
         LanesGrid.Children.Add(backgroundCanvas);
         Grid.SetRowSpan(backgroundCanvas, Chunk.Lanes.Count);
 
-        foreach (var measure in Chunk.Song.Measures)
+        foreach (var measure in Chunk.Channel.Song.Measures)
         {
             var measurePosition = PixelPerMs * measure.StartTimeMs;
             var subdivisionOffset = PixelPerMs * (measure.LengthMs / measure.TimeSignature.Denominator);
@@ -170,9 +170,9 @@ public partial class NoteHighwayControl
     {
         var control = (NoteHighwayControl)d;
 
-        if (control.NoteCanvasScroller == null || control.Chunk == null || control.Chunk.Song.LengthMs == 0) return;
+        if (control.NoteCanvasScroller == null || control.Chunk == null || control.Chunk.Channel.Song.LengthMs == 0) return;
 
-        var ratio = (control.CurrentTimeMs - control.VisualLatencyInMs) / control.Chunk.Song.LengthMs;
+        var ratio = (control.CurrentTimeMs - control.VisualLatencyInMs) / control.Chunk.Channel.Song.LengthMs;
         var here = (control.NoteCanvasScroller.ExtentWidth - control.NoteCanvasScroller.ActualWidth / 2) * ratio;
         control.NoteCanvasScroller.ScrollToHorizontalOffset(here);
     }

@@ -1,13 +1,18 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.Immutable;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Danidrum.Services;
+using Melanchall.DryWetMidi.Core;
+using Melanchall.DryWetMidi.Interaction;
+using Melanchall.DryWetMidi.Multimedia;
 using System.Windows;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 
 namespace Danidrum;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly PlaybackService _playbackService;
+    private Playback _playback;
 
     [ObservableProperty] private string _currentMidiFile;
     [ObservableProperty] private bool _isLoading;
@@ -21,14 +26,12 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private double _pixelPerMs = 0.3;
     [ObservableProperty] private double _visualLatencyInMs = 250;
 
-    private bool _isUserSeeking = false;
+    private OutputDevice _outputDevice;
+    [ObservableProperty] private IReadOnlyList<ChunkContext> _chunks;
 
-    public MainWindowViewModel(PlaybackService playbackService)
-    {
-        _playbackService = playbackService;
-        _playbackService.PositionChanged += OnPlaybackPositionChanged;
-        _playbackService.PlaybackStateChanged += isPlaying => IsPlaying = isPlaying;
-    }
+    private HashSet<int> _mutedChannels = new();
+
+    private bool _isUserSeeking = false;
 
     private void OnPlaybackPositionChanged(long currentTimeMs)
     {
@@ -45,41 +48,73 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task Loaded()
     {
         IsLoading = true;
-        //await LoadMidiFileAsync(@"c:\Users\koczu\Downloads\Nirvana-Come As You Are-11-11-2025.mid");
-        await LoadMidiFileAsync("Tool.mid");
+        Song = new SongContext("Tool.mid");
+        Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
+        SelectedChunk = Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
+        
+        _outputDevice = OutputDevice.GetByName("Microsoft GS Wavetable Synth");
+        _playback = Song.Midi.GetPlayback(_outputDevice);
+        _playback.NoteCallback = NoteCallback;
+        _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
+        
+        System.Windows.Media.CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
+
+        _playback.Start();
     }
 
-
-   
-    [RelayCommand]
-    private async Task LoadMidiFileAsync(string filePath)
+    private NotePlaybackData NoteCallback(NotePlaybackData rawNoteData, long rawTime, long rawLength, TimeSpan playbackTime)
     {
-        IsLoading = true;
-        await StopPlayback();
-
-        Song = new SongContext(filePath);
-        SelectedChunk = Song.Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Song.Chunks.FirstOrDefault();
-
-        _playbackService.InitializePlaybackEngine(Song);
-        _playbackService.Start();
-
-        IsLoading = false;
+        if (_mutedChannels.Contains(rawNoteData.Channel))
+        {
+            return null;
+        }
+        return rawNoteData;
     }
 
+    [RelayCommand]
+    private void MuteStateChanged(ChunkContext chunk)
+    {
+        foreach (var chk in chunk.Channel.Chunks)
+        {
+            chk.IsMuted = chunk.IsMuted;
+        }
 
+        _mutedChannels = Song.Channels.SelectMany(e => e.Chunks).Where(e => e.IsMuted).Select(e => e.ChannelId).ToHashSet();
+    }
+
+    private void PlaybackOnNotesPlaybackFinished(object? sender, NotesEventArgs e)
+    {
+        foreach (var note in e.Notes)
+        {
+            var ctx = Song.GetNoteContexts(note);
+            if (ctx.Count == 1)
+            {
+                if (SelectedChunk.ChannelId == ctx[0].Lane.Chunk.ChannelId)
+                {
+                    ctx[0].Lane.StateChanged?.Invoke(this, EventArgs.Empty);
+                }
+            }
+        }
+    }
+
+    private void CompositionTarget_Rendering(object? sender, EventArgs e)
+    {
+        CurrentSongPositionMs = _playback.GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
+        
+    }
 
     [RelayCommand]
     private void StartPlayback()
     {
-        _playbackService.Start();
+        _playback.Start();
     }
 
 
     [RelayCommand]
     private async Task PausePlayback()
     {
-        await _playbackService.PauseAsync();
+        _playback.Stop();
     }
 
     [RelayCommand]
@@ -98,7 +133,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand] // This now creates an IAsyncRelayCommand
     private async Task StopPlayback()
     {
-        await _playbackService.StopPlayback();
+        _playback.Stop();
     }
 
     [RelayCommand]
@@ -107,7 +142,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task StopSeeking()
     {
-        _playbackService.SeekTo((long)CurrentSongPositionMs);
+        //_playbackService.SeekTo((long)CurrentSongPositionMs);
         _isUserSeeking = false;
     }
 }

@@ -2,6 +2,8 @@
 using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Multimedia;
 using System.Diagnostics;
+using Melanchall.DryWetMidi.Interaction;
+using Melanchall.DryWetMidi.MusicTheory;
 
 namespace Danidrum.Services;
 
@@ -17,6 +19,8 @@ public class PlaybackService
     public event Action<long> PositionChanged;
     public event Action<bool>? PlaybackStateChanged;
 
+    private Playback _playback;
+
     private SongContext _song;
 
     public bool IsPlaying { get; private set; }
@@ -26,11 +30,14 @@ public class PlaybackService
         _outputDevice = OutputDevice.GetByName("Microsoft GS Wavetable Synth");
     }
 
+    private static MusicalTimeSpan NoteLength = MusicalTimeSpan.Quarter;
+    private static MusicalTimeSpan GapStepLength = MusicalTimeSpan.ThirtySecond;
+
+
     public void InitializePlaybackEngine(SongContext song)
     {
-        _song = song;
-        _nextEventIndex = 0;
-        _seekOffsetMs = 0;
+        _playback = song.Midi.GetPlayback(OutputDevice.GetByName("Microsoft GS Wavetable Synth"));
+        
     }
 
     public void UpdateMuteList(HashSet<int> mutedChannels)
@@ -40,12 +47,15 @@ public class PlaybackService
 
     public void Start()
     {
-        _playbackCts = new CancellationTokenSource();
-        // Start fresh so elapsed time aligns with new seek offset.
-        _stopwatch.Restart();
-        IsPlaying = true;
-        PlaybackStateChanged?.Invoke(IsPlaying);
-        _playbackTask = Task.Run(() => PlaybackLoop(_playbackCts.Token));
+        _playback.Start();
+        //_playback.Start();
+
+        //_playbackCts = new CancellationTokenSource();
+        //// Start fresh so elapsed time aligns with new seek offset.
+        //_stopwatch.Restart();
+        //IsPlaying = true;
+        //PlaybackStateChanged?.Invoke(IsPlaying);
+        //_playbackTask = Task.Run(() => PlaybackLoop(_playbackCts.Token));
     }
 
     public async Task StopPlayback()
@@ -73,7 +83,7 @@ public class PlaybackService
 
         for (var i = 0; i < 16; i++)
         {
-            // 123 stands for All Notes Off command
+            // 123 stands for All TimedNotes Off command
             var allNotesOff = new ControlChangeEvent((SevenBitNumber)123, (SevenBitNumber)0)
             {
                 Channel = (FourBitNumber)i
@@ -132,50 +142,50 @@ public class PlaybackService
 
     public void SeekTo(long seekOffsetMs)
     {
-        _seekOffsetMs = seekOffsetMs;
-        _nextEventIndex = _song.Notes.FindIndex(e => e.StartTimeMs >= _seekOffsetMs);
-        if (_nextEventIndex == -1)
-        {
-            _nextEventIndex = _song.Notes.Count;
-        }
+        //_seekOffsetMs = seekOffsetMs;
+        //_nextEventIndex = _song.TimedNotes.FindIndex(e => e.StartTimeMs >= _seekOffsetMs);
+        //if (_nextEventIndex == -1)
+        //{
+        //    _nextEventIndex = _song.TimedNotes.Count;
+        //}
         
-        _stopwatch.Restart();
+        //_stopwatch.Restart();
     }
 
     public async Task PlaybackLoop(CancellationToken token)
     {
-        while (!token.IsCancellationRequested)
-        {
-            var currentTimeMs = _stopwatch.ElapsedMilliseconds + _seekOffsetMs;
-            if (currentTimeMs >= _song.LengthMs)
-            {
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(StopPlayback);
-                break;
-            }
+        //while (!token.IsCancellationRequested)
+        //{
+        //    var currentTimeMs = _stopwatch.ElapsedMilliseconds + _seekOffsetMs;
+        //    if (currentTimeMs >= _song.LengthMs)
+        //    {
+        //        await System.Windows.Application.Current.Dispatcher.InvokeAsync(StopPlayback);
+        //        break;
+        //    }
 
-            var uiTimeMs = Math.Max(0, currentTimeMs);
-            PositionChanged?.Invoke(uiTimeMs);
+        //    var uiTimeMs = Math.Max(0, currentTimeMs);
+        //    PositionChanged?.Invoke(uiTimeMs);
 
-            while (_nextEventIndex < _song.Notes.Count)
-            {
-                var note = _song.Notes[_nextEventIndex];
-                if (note.StartTimeMs <= currentTimeMs)
-                {
-                    if (note.TimedEvent.Event is ChannelEvent channelEvent)
-                    {
-                        if (_mutedChannels == null || !_mutedChannels.Contains(channelEvent.Channel))
-                        {
-                            _outputDevice.SendEvent(note.TimedEvent.Event);
-                            note.Lane.StateChanged?.Invoke(this, EventArgs.Empty);
-                        }
-                    }
+        //    while (_nextEventIndex < _song.TimedNotes.Count)
+        //    {
+        //        var note = _song.TimedNotes[_nextEventIndex];
+        //        if (note.StartTimeMs <= currentTimeMs)
+        //        {
+        //            if (note.TimedEvent.Event is ChannelEvent channelEvent)
+        //            {
+        //                if (_mutedChannels == null || !_mutedChannels.Contains(channelEvent.Channel))
+        //                {
+        //                    _outputDevice.SendEvent(note.TimedEvent.Event);
+        //                    note.Lane.StateChanged?.Invoke(this, EventArgs.Empty);
+        //                }
+        //            }
                     
-                    _nextEventIndex++;
-                }
-                else break;
-            }
+        //            _nextEventIndex++;
+        //        }
+        //        else break;
+        //    }
 
-            await Task.Delay(1, token);
-        }
+        //    await Task.Delay(1, token);
+        //}
     }
 }

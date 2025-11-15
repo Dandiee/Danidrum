@@ -15,7 +15,7 @@
         TextElement.Foreground="{StaticResource MaterialDesignBody}">
 
     <Window.Resources>
-        <CollectionViewSource x:Key="TrackGroupsView" Source="{Binding Song.Chunks}">
+        <CollectionViewSource x:Key="TrackGroupsView" Source="{Binding Chunks}">
             <CollectionViewSource.GroupDescriptions>
                 <PropertyGroupDescription PropertyName="ChannelId" />
             </CollectionViewSource.GroupDescriptions>
@@ -119,6 +119,8 @@
                         <ToggleButton Grid.Column="2"
                                       Style="{StaticResource MaterialDesignActionToggleButton}"
                                       IsChecked="{Binding IsMuted}"
+                                      Command="{Binding DataContext.MuteStateChangedCommand, RelativeSource={RelativeSource AncestorType=local:MainWindow}}"
+                                      CommandParameter="{Binding}"
                                       Margin="8,0,0,0"
                                       VerticalAlignment="Center">
 
