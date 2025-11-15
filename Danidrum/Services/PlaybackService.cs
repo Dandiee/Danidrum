@@ -1,10 +1,7 @@
-﻿using Danidrum.ViewModels;
-using Melanchall.DryWetMidi.Common;
+﻿using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
-using Melanchall.DryWetMidi.Interaction;
 using Melanchall.DryWetMidi.Multimedia;
 using System.Diagnostics;
-using DryWetMidiFile = Melanchall.DryWetMidi.Core.MidiFile;
 
 namespace Danidrum.Services;
 
@@ -15,19 +12,12 @@ public class PlaybackService
     private readonly Stopwatch _stopwatch = new();
     private IOutputDevice _outputDevice;
     private long _seekOffsetMs;
-    private List<TimedEvent> _backingTrackEvents;
-    private DryWetMidiFile _dryWetMidiFile;
     private int _nextEventIndex;
-    private TempoMap _tempoMap;
     private HashSet<int> _mutedChannels;
     public event Action<long> PositionChanged;
     public event Action<bool>? PlaybackStateChanged;
 
-    private long _totalSongDurationInMs;
-
-    // Compensation for output device latency (e.g., Microsoft GS Wavetable Synth).
-    // Positive values delay the UI relative to the actual scheduled MIDI time so visuals match what you hear.
-    public int VisualLatencyMs { get; set; } = 240;
+    private SongContext _song;
 
     public bool IsPlaying { get; private set; }
 
@@ -36,16 +26,9 @@ public class PlaybackService
         _outputDevice = OutputDevice.GetByName("Microsoft GS Wavetable Synth");
     }
 
-    public void InitializePlaybackEngine(DryWetMidiFile dryWetMidiFile, IReadOnlyCollection<TrackInfo> tracks)
+    public void InitializePlaybackEngine(SongContext song)
     {
-        _dryWetMidiFile = dryWetMidiFile;
-        _tempoMap = dryWetMidiFile.GetTempoMap();
-        _totalSongDurationInMs = (long)((MetricTimeSpan)_dryWetMidiFile.GetDuration(TimeSpanType.Metric)).TotalMilliseconds;
-
-        _backingTrackEvents = _dryWetMidiFile.GetTimedEvents()
-            .OrderBy(e => e.Time)
-            .ToList();
-
+        _song = song;
         _nextEventIndex = 0;
         _seekOffsetMs = 0;
     }
@@ -150,12 +133,12 @@ public class PlaybackService
     public void SeekTo(long seekOffsetMs)
     {
         _seekOffsetMs = seekOffsetMs;
-        _nextEventIndex = _backingTrackEvents.FindIndex(e => e.TimeAs<MetricTimeSpan>(_tempoMap).TotalMilliseconds >= _seekOffsetMs);
+        _nextEventIndex = _song.Notes.FindIndex(e => e.StartTimeMs >= _seekOffsetMs);
         if (_nextEventIndex == -1)
         {
-            _nextEventIndex = _backingTrackEvents.Count;
+            _nextEventIndex = _song.Notes.Count;
         }
-        // Sync the running clock with the new position so currentTime = seek + elapsedSinceSeek
+        
         _stopwatch.Restart();
     }
 
@@ -164,28 +147,25 @@ public class PlaybackService
         while (!token.IsCancellationRequested)
         {
             var currentTimeMs = _stopwatch.ElapsedMilliseconds + _seekOffsetMs;
-            if (currentTimeMs >= _totalSongDurationInMs)
+            if (currentTimeMs >= _song.LengthMs)
             {
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(StopPlayback);
                 break;
             }
 
-            // Report UI time compensated by output latency so visuals align with what is heard.
-            var uiTimeMs = Math.Max(0, currentTimeMs - VisualLatencyMs);
+            var uiTimeMs = Math.Max(0, currentTimeMs);
             PositionChanged?.Invoke(uiTimeMs);
 
-            while (_nextEventIndex < _backingTrackEvents.Count)
+            while (_nextEventIndex < _song.Notes.Count)
             {
-                var timedEvent = _backingTrackEvents[_nextEventIndex];
-               
-                var eventTimeMs = timedEvent.TimeAs<MetricTimeSpan>(_tempoMap).TotalMilliseconds;
-                if (eventTimeMs <= currentTimeMs)
+                var note = _song.Notes[_nextEventIndex];
+                if (note.StartTimeMs <= currentTimeMs)
                 {
-                    if (timedEvent.Event is ChannelEvent channelEvent)
+                    if (note.TimedEvent.Event is ChannelEvent channelEvent)
                     {
                         if (_mutedChannels == null || !_mutedChannels.Contains(channelEvent.Channel))
                         {
-                            _outputDevice.SendEvent(timedEvent.Event);
+                            _outputDevice.SendEvent(note.TimedEvent.Event);
                         }
                     }
                     

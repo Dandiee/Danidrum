@@ -1,126 +1,51 @@
 ﻿<UserControl x:Class="Danidrum.UserControls.NoteHighwayControl"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
- xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
- xmlns:viewmodels="clr-namespace:Danidrum.ViewModels"
- xmlns:local="clr-namespace:Danidrum.UserControls"
- mc:Ignorable="d" 
- d:DesignHeight="450" d:DesignWidth="800">
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Danidrum.UserControls"
+             xmlns:services="clr-namespace:Danidrum.Services"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
     <UserControl.Resources>
         <local:MidLineConverter x:Key="MidLineConverter"/>
 
-        <!-- Template for lane title rows. Code-behind will instantiate this per lane. -->
-        <DataTemplate x:Key="LaneNameTemplate" DataType="{x:Type viewmodels:NoteLaneViewModel}">
-            <Border Height="{Binding LaneHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
- BorderBrush="{DynamicResource MaterialDesign.Brush.OutlineVariant}"
- BorderThickness="0,0,1,1">
-                <TextBlock Text="{Binding LaneName}"
- Style="{StaticResource MaterialDesignBody1TextBlock}"
- VerticalAlignment="Center"
- Margin="10,0"
- TextTrimming="CharacterEllipsis"/>
+        <DataTemplate x:Key="LaneNameTemplate" DataType="{x:Type services:LaneContext}">
+            <Border Height="100"
+                    BorderBrush="{DynamicResource MaterialDesign.Brush.OutlineVariant}"
+                    BorderThickness="0,0,1,1">
+                <TextBlock Text="{Binding Name}"
+                           Style="{StaticResource MaterialDesignBody1TextBlock}"
+                           VerticalAlignment="Center"
+                           Margin="10,0"
+                           TextTrimming="CharacterEllipsis"/>
             </Border>
         </DataTemplate>
     </UserControl.Resources>
+
+
     <Grid>
+
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="200"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Column0: Lane Names -->
+        <Grid x:Name="LaneNamesGrid" />
 
-            <Grid x:Name="LaneNamesGrid" />
-
-        <!-- Column1: Main Highway -->
         <Grid Grid.Column="1">
 
             <ScrollViewer x:Name="NoteCanvasScroller"
                           SizeChanged="NoteCanvasScroller_SizeChanged"
                           VerticalScrollBarVisibility="Hidden"
-                          HorizontalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Hidden"
                           CanContentScroll="False">
                 <Grid Margin="{Binding ElementName=NoteCanvasScroller, Path=ActualWidth, Converter={StaticResource MidLineConverter}}">
-
-                    <!-- BAR LINES (drawn behind notes) -->
-                    <ItemsControl ItemsSource="{Binding Bars}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <!-- Canvas full width so bar X positions are absolute -->
-                                <Canvas Background="Transparent"
-                                        Width="{Binding SongTotalWidth, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
-                                        Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type viewmodels:BarViewModel}">
-                                <Grid>
-                                <!-- thin vertical line; height stretched via container canvas -->
-                                <Rectangle Width="2"
-                                           Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
-                                           Fill="Blue"
-                                           Opacity="0.6"
-                                           IsHitTestVisible="False"/>
-
-                                <!-- Label for the bar: measure index and time signature -->
-                                <!--<TextBlock Text="{Binding DisplayText}"
-                                           FontSize="11"
-                                           Margin="6,4,6,0"
-                                           VerticalAlignment="Top"
-                                           HorizontalAlignment="Left"
-                                           Foreground="{DynamicResource MaterialDesignBody}"
-                                           IsHitTestVisible="False"
-                                           TextTrimming="CharacterEllipsis" />-->
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-
-                        <ItemsControl.ItemContainerStyle>
-                            <Style TargetType="ContentPresenter">
-                                <Setter Property="Canvas.Left" Value="{Binding X}" />
-                                <Setter Property="Canvas.Top" Value="0" />
-                            </Style>
-                        </ItemsControl.ItemContainerStyle>
-                    </ItemsControl>
-
-                    <!-- NOTE LANES - lightweight drawing control placed in Grid rows -->
-                    <Grid x:Name="LanesGrid" Width="{Binding SongTotalWidth, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}" />
-
-                    <!-- SUBDIVISION LINES (drawn behind notes and lanes) -->
-                    <ItemsControl ItemsSource="{Binding Subdivisions}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <!-- Canvas full width so subdivision X positions are absolute -->
-                                <Canvas Background="Transparent"
-                                        Width="{Binding SongTotalWidth, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
-                                        Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Rectangle Width="1"
-Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
- Fill="LightBlue"
- Opacity="0.6"
- IsHitTestVisible="False" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-
-                        <ItemsControl.ItemContainerStyle>
-                            <Style TargetType="ContentPresenter">
-                                <Setter Property="Canvas.Left" Value="{Binding X}" />
-                                <Setter Property="Canvas.Top" Value="0" />
-                            </Style>
-                        </ItemsControl.ItemContainerStyle>
-                    </ItemsControl>
-
+                    <Grid x:Name="LanesGrid"  />
                 </Grid>
             </ScrollViewer>
 
-            <!-- Center playhead -->
             <Border Width="2" Background="Red" HorizontalAlignment="Center" VerticalAlignment="Stretch" IsHitTestVisible="False" />
 
         </Grid>

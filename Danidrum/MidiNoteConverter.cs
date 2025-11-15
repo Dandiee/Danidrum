@@ -1,38 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System.Collections.ObjectModel;
-using Melanchall.DryWetMidi.Interaction;
-
-namespace Danidrum.ViewModels;
-
-public partial class NoteViewModel : ObservableObject
-{
-    // The X-coordinate for the rectangle (e.g., Canvas.Left)
-    [ObservableProperty]
-    private double _canvasLeft;
-
-    // The width of the rectangle
-    [ObservableProperty]
-    private double _canvasWidth;
-
-    public Note Note { get; set; }
-    public double StartTimeMs { get; set; }
-    public double DurationMs { get; set; }
-
-
-}
-
-public partial class NoteLaneViewModel : ObservableObject
-{
-    // The display name for the lane (e.g., "C4 Kick", "F#3 Snare")
-    [ObservableProperty]
-    private string _laneName;
-
-    [ObservableProperty]
-    private int _noteNumber;
-
-    // The collection of notes that will be drawn on this lane
-    public ObservableCollection<NoteViewModel> Notes { get; } = new();
-}
+﻿namespace Danidrum;
 
 public static class MidiNoteConverter
 {

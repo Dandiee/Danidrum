@@ -9,16 +9,13 @@
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:services="clr-namespace:Danidrum.Services" 
-        xmlns:viewmodels="clr-namespace:Danidrum.ViewModels" 
         xmlns:userControls="clr-namespace:Danidrum.UserControls"
         Title="MainWindow" Height="800" Width="1800"
         Background="{StaticResource MaterialDesignPaper}"
         TextElement.Foreground="{StaticResource MaterialDesignBody}">
 
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <CollectionViewSource x:Key="TrackGroupsView" 
-                                  Source="{Binding Tracks}">
+        <CollectionViewSource x:Key="TrackGroupsView" Source="{Binding Song.Chunks}">
             <CollectionViewSource.GroupDescriptions>
                 <PropertyGroupDescription PropertyName="ChannelId" />
             </CollectionViewSource.GroupDescriptions>
@@ -46,20 +43,20 @@
 
 
         <ListBox Grid.Column="0"
-             ItemsSource="{Binding Source={StaticResource TrackGroupsView}}"
-             SelectedItem="{Binding SelectedTrack}"
-             HorizontalContentAlignment="Stretch"
-             Style="{StaticResource MaterialDesignNavigationListBox}">
+                 ItemsSource="{Binding Source={StaticResource TrackGroupsView}}"
+                 SelectedItem="{Binding SelectedChunk}"
+                 HorizontalContentAlignment="Stretch"
+                 Style="{StaticResource MaterialDesignNavigationListBox}">
 
             <ListBox.GroupStyle>
                 <GroupStyle>
                     <GroupStyle.HeaderTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Name, StringFormat='Channel {0}'}"
-                                   FontWeight="Bold"
-                                   Margin="5"
-                                   Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
-                                   Foreground="{DynamicResource MaterialDesign.Brush.Primary}" />
+                                       FontWeight="Bold"
+                                       Margin="5"
+                                       Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                                       Foreground="{DynamicResource MaterialDesign.Brush.Primary}" />
                         </DataTemplate>
                     </GroupStyle.HeaderTemplate>
 
@@ -83,7 +80,7 @@
             </ListBox.GroupStyle>
 
             <ListBox.ItemTemplate>
-                <DataTemplate DataType="{x:Type services:TrackInfo}">
+                <DataTemplate DataType="{x:Type services:ChunkContext}">
                     <Grid Margin="5, 8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -98,9 +95,9 @@
                                      Foreground="{DynamicResource MaterialDesign.Brush.OnSurfaceVariant}"/>
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding TrackName}"
-                           FontWeight="Bold"
-                           TextTrimming="CharacterEllipsis">
+                            <TextBlock Text="{Binding Name}"
+                                       FontWeight="Bold"
+                                       TextTrimming="CharacterEllipsis">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignBody1TextBlock}">
                                         <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.OnSurface}" />
@@ -114,16 +111,16 @@
                             </TextBlock>
 
                             <TextBlock Text="{Binding InstrumentName}"
-                           Style="{StaticResource MaterialDesignBody2TextBlock}"
-                           Foreground="{DynamicResource MaterialDesign.Brush.OnSurfaceVariant}"
-                           TextTrimming="CharacterEllipsis"/>
+                                       Style="{StaticResource MaterialDesignBody2TextBlock}"
+                                       Foreground="{DynamicResource MaterialDesign.Brush.OnSurfaceVariant}"
+                                       TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
 
                         <ToggleButton Grid.Column="2"
-                          Style="{StaticResource MaterialDesignActionToggleButton}"
-                          IsChecked="{Binding IsMuted}"
-                          Margin="8,0,0,0"
-                          VerticalAlignment="Center">
+                                      Style="{StaticResource MaterialDesignActionToggleButton}"
+                                      IsChecked="{Binding IsMuted}"
+                                      Margin="8,0,0,0"
+                                      VerticalAlignment="Center">
 
                             <materialDesign:PackIcon Kind="VolumeHigh" />
 
@@ -181,13 +178,9 @@
             </Grid>
 
             <userControls:NoteHighwayControl Grid.Row="1"
+                                             Chunk="{Binding SelectedChunk}"
                                              DataContext="{Binding}"
-                                             NoteLanes="{Binding NoteLanes}"
-                                             CurrentTimeMs="{Binding CurrentSongPositionMs}"
-                                             SongTotalWidth="{Binding TotalSongWidth}"
-                                             TotalSongDurationMs="{Binding TotalSongDurationMs}"
-                                             LanesCount="{Binding NoteLanes.Count}"
-                                             PixelsPerSecond="{Binding PixelsPerSecond}" />
+                                             CurrentTimeMs="{Binding CurrentSongPositionMs}"/>
 
         </Grid>
 

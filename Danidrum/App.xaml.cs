@@ -12,7 +12,6 @@ public partial class App : Application
         base.OnStartup(e);
 
         var services = new ServiceCollection();
-        services.AddSingleton<TrackListService>();
         services.AddTransient<MainWindowViewModel>();
         services.AddSingleton<PlaybackService>();
 

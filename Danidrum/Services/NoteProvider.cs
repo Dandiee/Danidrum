@@ -1,4 +1,6 @@
-﻿using Melanchall.DryWetMidi.Common;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Danidrum.ViewModels;
+using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
 using DryWetMidiFile = Melanchall.DryWetMidi.Core.MidiFile;
@@ -10,22 +12,17 @@ public class SongContext
     public TempoMap TempoMap { get; }
     public IReadOnlyList<ChunkContext> Chunks { get; }
     public IReadOnlyList<MeasureContext> Measures { get; }
-    public IReadOnlyList<NoteContext> Notes { get; }
+    public List<NoteContext> Notes { get; }
     public double LengthMs { get; }
 
-    public SongContext(DryWetMidiFile midi)
+    public SongContext(string midiFilePath)
     {
-        Midi = midi;
-        TempoMap = midi.GetTempoMap();
-        Chunks = midi.GetTrackChunks().Select(chunk => new ChunkContext(this, chunk)).OrderBy(e => e.ChannelId).ToList();
-        
-
+        Midi = DryWetMidiFile.Read(midiFilePath);
+        TempoMap = Midi.GetTempoMap();
+        Chunks = Midi.GetTrackChunks().Select(chunk => new ChunkContext(this, chunk)).OrderBy(e => e.ChannelId).ToList();
         Notes = Chunks.SelectMany(chk => chk.Lanes).SelectMany(lane => lane.Notes).OrderBy(e => e.TimedEvent.Time).ToList();
-
-        var lastNote = Notes.Last();
-        LengthMs = lastNote.StartTimeMs + lastNote.DurationMs;
-
-        Measures = Extract(TempoMap, lastNote.TimedEvent.Time).ToList();
+        LengthMs = Midi.GetDuration<MetricTimeSpan>().TotalMilliseconds;
+        Measures = Extract(TempoMap, Midi.GetDuration<MidiTimeSpan>()).ToList();
     }
 
     private static List<MeasureContext> Extract(TempoMap tempoMap, long endTime)
@@ -76,6 +73,7 @@ public class SongContext
                 StartTimeMs = startMs,
                 EndTimeMs = endMs,
                 Tempo = tempo,
+                LengthMs = endMs - startMs,
                 TimeSignature = signature
             });
 
@@ -92,11 +90,12 @@ public class MeasureContext
     public int MeasureIndex { get; set; }
     public double StartTimeMs { get; set; }
     public double EndTimeMs { get; set; }
+    public double LengthMs { get; set; }
     public Tempo Tempo { get; set; }
     public TimeSignature TimeSignature { get; set; }
 }
 
-public class ChunkContext
+public partial class ChunkContext : ObservableObject
 {
     public static readonly HashSet<string> DrumKeywords = new(["drum", "kit", "perc"], StringComparer.OrdinalIgnoreCase);
 
@@ -105,10 +104,12 @@ public class ChunkContext
 
     public IReadOnlyList<LaneContext> Lanes { get; }
 
-    public string TrackName { get; }
+    public string Name { get; }
     public string InstrumentName { get; }
     public int ChannelId { get; }
     public bool IsLikelyDrumTrack { get; }
+
+    [ObservableProperty] private bool _isMuted = false;
 
     public ChunkContext(SongContext song, TrackChunk trackChunk)
     {
@@ -116,10 +117,10 @@ public class ChunkContext
         TrackChunk = trackChunk;
         var notes = trackChunk.GetNotes().ToList();
         ChannelId = notes[0].Channel;
-        TrackName = trackChunk.Events.OfType<SequenceTrackNameEvent>().FirstOrDefault()?.Text ?? "Unknown Track";
+        Name = trackChunk.Events.OfType<SequenceTrackNameEvent>().FirstOrDefault()?.Text ?? "Unknown Track";
         InstrumentName = string.Join(", ", trackChunk.Events.OfType<InstrumentNameEvent>().Select(e => e.Text));
         
-        IsLikelyDrumTrack = DrumKeywords.Any(key => TrackName.Contains(key, StringComparison.OrdinalIgnoreCase) 
+        IsLikelyDrumTrack = DrumKeywords.Any(key => Name.Contains(key, StringComparison.OrdinalIgnoreCase) 
                                                     || InstrumentName.Contains(key, StringComparison.OrdinalIgnoreCase));
 
         var notesByNumbers = notes.GroupBy(e => e.NoteNumber);
@@ -131,12 +132,14 @@ public class LaneContext
 {
     public ChunkContext Chunk { get; }
     public SevenBitNumber NoteNumber { get; }
+    public string Name { get; }
     public IReadOnlyList<NoteContext> Notes {get;}
 
     public LaneContext(ChunkContext chunk, SevenBitNumber noteNumber, IReadOnlyList<Note> notes)
     {
         Chunk = chunk;
         NoteNumber = noteNumber;
+        Name = MidiNoteConverter.GetNoteName(noteNumber, Chunk.ChannelId);
         Notes = notes.Select(note => new NoteContext(this, note)).ToList();
     }
 }

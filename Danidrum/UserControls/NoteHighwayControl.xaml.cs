@@ -1,13 +1,10 @@
-﻿using System;
-using System.Diagnostics;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Collections;
-using System.Collections.Specialized;
-using Danidrum.ViewModels;
-using System.Linq;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using Danidrum.Services;
 
 namespace Danidrum.UserControls;
 
@@ -29,53 +26,35 @@ public class MidLineConverter : IValueConverter
     }
 }
 
-public partial class NoteHighwayControl : UserControl
+public partial class NoteHighwayControl
 {
+    public static double PixelPerSecond = 300;
+    public static double PixelPerMs = PixelPerSecond / 1000;
+
     public NoteHighwayControl()
     {
         InitializeComponent();
     }
 
-    // NoteLanes dependency property (collection of NoteLaneViewModel)
-    public static readonly DependencyProperty NoteLanesProperty = DependencyProperty.Register(
-        nameof(NoteLanes), typeof(IEnumerable), typeof(NoteHighwayControl),
-        new PropertyMetadata(null, OnNoteLanesChanged));
-
-    public IEnumerable NoteLanes
+    
+    public static readonly DependencyProperty ChunkProperty = DependencyProperty.Register(nameof(Chunk), typeof(ChunkContext), typeof(NoteHighwayControl), new PropertyMetadata(null, OnChunkPropertyChanged));
+    public ChunkContext Chunk
     {
-        get => (IEnumerable)GetValue(NoteLanesProperty);
-        set => SetValue(NoteLanesProperty, value);
+        get => (ChunkContext)GetValue(ChunkProperty);
+        set => SetValue(ChunkProperty, value);
     }
-
-    private static void OnNoteLanesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    private static void OnChunkPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var control = (NoteHighwayControl)d;
-        control.UnsubscribeFromNoteLanes(e.OldValue as INotifyCollectionChanged);
-        control.SubscribeToNoteLanes(e.NewValue as INotifyCollectionChanged);
         control.RebuildLanes();
     }
 
-    private void SubscribeToNoteLanes(INotifyCollectionChanged? coll)
-    {
-        if (coll != null)
-            coll.CollectionChanged += NoteLanes_CollectionChanged;
-    }
+    private void NoteCanvasScroller_SizeChanged(object sender, SizeChangedEventArgs e) => RebuildLanes();
 
-    private void UnsubscribeFromNoteLanes(INotifyCollectionChanged? coll)
-    {
-        if (coll != null)
-            coll.CollectionChanged -= NoteLanes_CollectionChanged;
-    }
-
-    private void NoteLanes_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        // Simple approach: rebuild all rows on change
-        Dispatcher.InvokeAsync(RebuildLanes);
-    }
-
+  
     private void RebuildLanes()
     {
-        if (LanesGrid == null || LaneNamesGrid == null) return;
+        if (Chunk == null) return;
 
         LanesGrid.RowDefinitions.Clear();
         LanesGrid.Children.Clear();
@@ -83,264 +62,87 @@ public partial class NoteHighwayControl : UserControl
         LaneNamesGrid.RowDefinitions.Clear();
         LaneNamesGrid.Children.Clear();
 
-        if (NoteLanes == null) return;
+        LanesGrid.Width = PixelPerMs * Chunk.Song.LengthMs;
 
-        var lanes = NoteLanes.Cast<NoteLaneViewModel>().ToList();
+        var backgroundCanvas = new Canvas();
+        LanesGrid.Children.Add(backgroundCanvas);
+        Grid.SetRowSpan(backgroundCanvas, Chunk.Lanes.Count);
 
-        LanesCount = lanes.Count;
-
-        // Try get the template once
-        var laneNameTemplate = TryFindResource("LaneNameTemplate") as DataTemplate;
-
-        for (int i =0; i < lanes.Count; i++)
+        foreach (var measure in Chunk.Song.Measures)
         {
-            var lane = lanes[i];
-
-            // create row in both grids
-            var rd = new RowDefinition { Height = new GridLength(LaneHeight) };
-            LanesGrid.RowDefinitions.Add(rd);
-            LaneNamesGrid.RowDefinitions.Add(new RowDefinition { Height = rd.Height });
-
-            // create NoteLaneControl
-            var laneCtrl = new NoteLaneControl()
+            var measurePosition = PixelPerMs * measure.StartTimeMs;
+            var subdivisionOffset = PixelPerMs * (measure.LengthMs / measure.TimeSignature.Denominator);
+            backgroundCanvas.Children.Add(new Line
             {
-                Notes = lane.Notes,
-                NoteHeight = NoteHeight,
-                Height = LaneHeight,
-                Width = SongTotalWidth,
-                VerticalAlignment = VerticalAlignment.Top
+                X1 = measurePosition,
+                X2 = measurePosition,
+                Y1 = 0,
+                Y2 = LanesGrid.ActualHeight,
+
+                Stroke = Brushes.White,
+            });
+
+            var subdivisions = measure.TimeSignature.Denominator;
+
+            for (var i = 1; i < subdivisions; i++)
+            {
+                var subdivisionPosition = measurePosition + subdivisionOffset * i;
+                backgroundCanvas.Children.Add(new Line
+                {
+                    X1 = subdivisionPosition,
+                    X2 = subdivisionPosition,
+                    Y1 = 0,
+                    Y2 = LanesGrid.ActualHeight,
+
+                    Stroke = Brushes.DarkGray,
+                });
+            }
+        }
+
+        var laneNameTemplate = TryFindResource("LaneNameTemplate") as DataTemplate;
+        var laneHeight = ActualHeight / Chunk.Lanes.Count;
+
+        for (var i = 0; i < Chunk.Lanes.Count; i++)
+        {
+            var lane = Chunk.Lanes[i];
+
+            LanesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            LaneNamesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+            var laneControl = new NoteLaneControl(lane)
+            {
+                Height = laneHeight
             };
-
-            Grid.SetRow(laneCtrl, i);
-            LanesGrid.Children.Add(laneCtrl);
-
-            // create a ContentControl that uses the LaneNameTemplate (defined in XAML)
-            ContentControl titleHost;
-            if (laneNameTemplate != null)
+            Grid.SetRow(laneControl, i);
+            LanesGrid.Children.Add(laneControl);
+            
+            var titleHost = new ContentControl
             {
-                titleHost = new ContentControl
-                {
-                    Content = lane,
-                    ContentTemplate = laneNameTemplate
-                };
-            }
-            else
-            {
-                // fallback to simple TextBlock if template not found
-                titleHost = new ContentControl
-                {
-                    Content = lane,
-                    ContentTemplate = null
-                };
-                var tb = new TextBlock();
-                tb.SetBinding(TextBlock.TextProperty, new Binding(nameof(NoteLaneViewModel.LaneName)) { Source = lane });
-                titleHost.Content = tb;
-            }
-
-            // Ensure the host fills the row height
-            titleHost.VerticalAlignment = VerticalAlignment.Top;
-            titleHost.Height = LaneHeight;
+                Content = lane,
+                ContentTemplate = laneNameTemplate,
+                VerticalAlignment = VerticalAlignment.Top,
+                Height = laneHeight
+            };
 
             Grid.SetRow(titleHost, i);
             LaneNamesGrid.Children.Add(titleHost);
         }
     }
 
-    // Pixels per second (zoom)
-    public static readonly DependencyProperty PixelsPerSecondProperty =
-        DependencyProperty.Register(nameof(PixelsPerSecond), typeof(double), typeof(NoteHighwayControl),
-            new PropertyMetadata(50.0, OnPixelsPerSecondChanged));
-
-    public double PixelsPerSecond
-    {
-        get => (double)GetValue(PixelsPerSecondProperty);
-        set => SetValue(PixelsPerSecondProperty, value);
-    }
-
-    private static void OnPixelsPerSecondChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var control = (NoteHighwayControl)d;
-        control.UpdateScrollPosition();
-    }
-
-    // Current playhead time in milliseconds
-    public static readonly DependencyProperty CurrentTimeMsProperty =
-        DependencyProperty.Register(nameof(CurrentTimeMs), typeof(double), typeof(NoteHighwayControl),
-            new PropertyMetadata(0.0, OnCurrentTimeMsChanged));
-
+    public static readonly DependencyProperty CurrentTimeMsProperty = DependencyProperty.Register(nameof(CurrentTimeMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0.0, OnCurrentTimeMsChanged));
     public double CurrentTimeMs
     {
         get => (double)GetValue(CurrentTimeMsProperty);
         set => SetValue(CurrentTimeMsProperty, value);
     }
-
     private static void OnCurrentTimeMsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var control = (NoteHighwayControl)d;
-        control.UpdateScrollPosition();
-    }
 
-    // total width of the song in pixels
-    public static readonly DependencyProperty SongTotalWidthProperty =
-        DependencyProperty.Register(nameof(SongTotalWidth), typeof(double), typeof(NoteHighwayControl),
-            new PropertyMetadata(1000.0, OnSongTotalWidthChanged));
+        if (control.NoteCanvasScroller == null || control.Chunk == null || control.Chunk.Song.LengthMs == 0) return;
 
-    public double SongTotalWidth
-    {
-        get => (double)GetValue(SongTotalWidthProperty);
-        set => SetValue(SongTotalWidthProperty, value);
-    }
-
-    private static void OnSongTotalWidthChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var control = (NoteHighwayControl)d;
-        // propagate width to lane children
-        control.UpdateLaneWidths();
-    }
-
-    public static readonly DependencyProperty TotalSongDurationMsProperty = DependencyProperty.Register(
-        nameof(TotalSongDurationMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(default(double)));
-    public double TotalSongDurationMs
-    {
-        get { return (double)GetValue(TotalSongDurationMsProperty); }
-        set { SetValue(TotalSongDurationMsProperty, value); }
-    }
-
-    public static readonly DependencyProperty NotePaddingProperty =
-        DependencyProperty.Register(nameof(NotePadding), typeof(Thickness), typeof(NoteHighwayControl),
-            new PropertyMetadata(default(Thickness)));
-
-    public Thickness NotePadding
-    {
-        get => (Thickness)GetValue(NotePaddingProperty);
-        set => SetValue(NotePaddingProperty, value);
-    }
-
-    public static readonly DependencyProperty LanesCountProperty =
-        DependencyProperty.Register(nameof(LanesCount), typeof(int), typeof(NoteHighwayControl),
-            new PropertyMetadata(1, OnLanesCountChanged));
-
-    public int LanesCount
-    {
-        get => (int)GetValue(LanesCountProperty);
-        set => SetValue(LanesCountProperty, value);
-    }
-
-    private static void OnLanesCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var control = (NoteHighwayControl)d;
-        control.UpdateLaneSizes(new Size(control.NoteCanvasScroller.ActualWidth, control.NoteCanvasScroller.ActualHeight));
-    }
-
-    public static readonly DependencyProperty LaneHeightProperty =
-        DependencyProperty.Register(nameof(LaneHeight), typeof(double), typeof(NoteHighwayControl),
-            new PropertyMetadata(40.0, OnLaneHeightChanged));
-
-    public double LaneHeight
-    {
-        get => (double)GetValue(LaneHeightProperty);
-        set => SetValue(LaneHeightProperty, value);
-    }
-
-    private static void OnLaneHeightChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var control = (NoteHighwayControl)d;
-        control.UpdateLaneHeights();
-    }
-
-    public static readonly DependencyProperty NoteHeightProperty =
-        DependencyProperty.Register(nameof(NoteHeight), typeof(double), typeof(NoteHighwayControl),
-            new PropertyMetadata(30.0, OnNoteHeightChanged));
-
-    public double NoteHeight
-    {
-        get => (double)GetValue(NoteHeightProperty);
-        set => SetValue(NoteHeightProperty, value);
-    }
-
-    private static void OnNoteHeightChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-    {
-        var control = (NoteHighwayControl)d;
-        control.UpdateNoteHeights();
-    }
-
-    // Helper: pixels per millisecond (shared conversion)
-    private double PxPerMs => PixelsPerSecond / 1000.0;
-
-    private void UpdateLaneSizes(Size newSize)
-    {
-        // Prefer viewport height if available, else fallback to ActualHeight
-        double totalHeight = NoteCanvasScroller?.ViewportHeight > 0
-            ? NoteCanvasScroller.ViewportHeight
-            : ActualHeight;
-
-        totalHeight = newSize.Height;
-
-        if (LanesCount <= 0) return;
-
-        LaneHeight = totalHeight / LanesCount;
-        NoteHeight = Math.Max(4, LaneHeight - 10); // leave a small margin, min height 4
-
-        UpdateLaneHeights();
-    }
-
-    private void UpdateLaneHeights()
-    {
-        if (LanesGrid == null || LaneNamesGrid == null) return;
-
-        for (int i =0; i < LanesGrid.RowDefinitions.Count; i++)
-        {
-            LanesGrid.RowDefinitions[i].Height = new GridLength(LaneHeight);
-        }
-
-        for (int i =0; i < LaneNamesGrid.RowDefinitions.Count; i++)
-        {
-            LaneNamesGrid.RowDefinitions[i].Height = new GridLength(LaneHeight);
-        }
-
-        foreach (var child in LanesGrid.Children.OfType<NoteLaneControl>())
-        {
-            child.Height = LaneHeight;
-            child.NoteHeight = NoteHeight;
-        }
-
-        foreach (var child in LaneNamesGrid.Children.OfType<ContentControl>())
-        {
-            child.Height = LaneHeight;
-        }
-    }
-
-    private void UpdateNoteHeights()
-    {
-        if (LanesGrid == null) return;
-        foreach (var child in LanesGrid.Children.OfType<NoteLaneControl>())
-        {
-            child.NoteHeight = NoteHeight;
-        }
-    }
-
-    private void UpdateLaneWidths()
-    {
-        if (LanesGrid == null) return;
-        foreach (var child in LanesGrid.Children.OfType<NoteLaneControl>())
-        {
-            child.Width = SongTotalWidth;
-        }
-    }
-
-    private void NoteCanvasScroller_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        UpdateLaneSizes(e.NewSize);
-    }
-
-    // Center playhead in viewport (clamped)
-    private void UpdateScrollPosition()
-    {
-        if (NoteCanvasScroller == null || TotalSongDurationMs == 0) return;
-
-        var ratio = CurrentTimeMs / TotalSongDurationMs;
-        var here = (NoteCanvasScroller.ExtentWidth - (NoteCanvasScroller.ActualWidth / 2)) * ratio;
-        NoteCanvasScroller.ScrollToHorizontalOffset(here);
-
+        var ratio = control.CurrentTimeMs / control.Chunk.Song.LengthMs;
+        var here = (control.NoteCanvasScroller.ExtentWidth - control.NoteCanvasScroller.ActualWidth / 2) * ratio;
+        control.NoteCanvasScroller.ScrollToHorizontalOffset(here);
     }
 }
