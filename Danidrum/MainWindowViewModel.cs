@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Diagnostics;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Danidrum.Services;
@@ -144,6 +145,7 @@ public partial class MainWindowViewModel : ObservableObject
             if (SelectedChunk.TryGetLane(noteOn.NoteNumber, out var lane))
             {
                 lane.InputReceived?.Invoke(this, new InputArg(noteOn.NoteNumber, _currentSongPositionMs));
+                Debug.WriteLine($"{noteOn.NoteNumber}, {noteOn.Channel}, {noteOn.EventType}");
             }
         }
     }
