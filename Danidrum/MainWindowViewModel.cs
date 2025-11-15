@@ -18,6 +18,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private SongContext _song;
 
+    [ObservableProperty] private double _pixelPerMs = 0.3;
+    [ObservableProperty] private double _visualLatencyInMs = 250;
+
     private bool _isUserSeeking = false;
 
     public MainWindowViewModel(PlaybackService playbackService)

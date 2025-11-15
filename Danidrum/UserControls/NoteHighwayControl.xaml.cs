@@ -28,13 +28,25 @@ public class MidLineConverter : IValueConverter
 
 public partial class NoteHighwayControl
 {
-    public static double PixelPerSecond = 300;
-    public static double PixelPerMs = PixelPerSecond / 1000;
-    public static double VisualLatency = 400;
+    //public static double PixelPerSecond = 300;
+    //public static double PixelPerMs = PixelPerSecond / 1000;
+    //public static double VisualLatency = 400;
 
     public NoteHighwayControl()
     {
         InitializeComponent();
+    }
+
+    public static readonly DependencyProperty PixelPerMsProperty = DependencyProperty.Register(nameof(PixelPerMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0d, OnPixelPerMsPropertyChanged));
+    private static void OnPixelPerMsPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var control = (NoteHighwayControl)d;
+        control.RebuildLanes();
+    }
+    public double PixelPerMs
+    {
+        get => (double)GetValue(PixelPerMsProperty);
+        set => SetValue(PixelPerMsProperty, value);
     }
 
     
@@ -121,7 +133,7 @@ public partial class NoteHighwayControl
             LanesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             LaneNamesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-            var laneControl = new NoteLaneControl(lane)
+            var laneControl = new NoteLaneControl(lane, this)
             {
                 Height = laneHeight
             };
@@ -141,6 +153,13 @@ public partial class NoteHighwayControl
         }
     }
 
+    public static readonly DependencyProperty VisualLatencyInMsProperty = DependencyProperty.Register(nameof(VisualLatencyInMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0d));
+    public double VisualLatencyInMs
+    {
+        get => (double)GetValue(VisualLatencyInMsProperty);
+        set => SetValue(VisualLatencyInMsProperty, value);
+    }
+
     public static readonly DependencyProperty CurrentTimeMsProperty = DependencyProperty.Register(nameof(CurrentTimeMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0.0, OnCurrentTimeMsChanged));
     public double CurrentTimeMs
     {
@@ -153,7 +172,7 @@ public partial class NoteHighwayControl
 
         if (control.NoteCanvasScroller == null || control.Chunk == null || control.Chunk.Song.LengthMs == 0) return;
 
-        var ratio = (control.CurrentTimeMs - VisualLatency) / control.Chunk.Song.LengthMs;
+        var ratio = (control.CurrentTimeMs - control.VisualLatencyInMs) / control.Chunk.Song.LengthMs;
         var here = (control.NoteCanvasScroller.ExtentWidth - control.NoteCanvasScroller.ActualWidth / 2) * ratio;
         control.NoteCanvasScroller.ScrollToHorizontalOffset(here);
     }

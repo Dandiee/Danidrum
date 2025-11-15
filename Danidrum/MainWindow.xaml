@@ -142,6 +142,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Grid>
@@ -157,31 +158,41 @@
                         Value="{Binding CurrentSongPositionMs}"
                         Style="{StaticResource MaterialDesign3.MaterialDesignSlider}">
 
-                <b:Interaction.Triggers>
-                    <b:EventTrigger EventName="PreviewMouseLeftButtonDown">
-                        <b:InvokeCommandAction Command="{Binding StartSeekingCommand}" />
-                    </b:EventTrigger>
+                    <b:Interaction.Triggers>
+                        <b:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                            <b:InvokeCommandAction Command="{Binding StartSeekingCommand}" />
+                        </b:EventTrigger>
 
-                    <b:EventTrigger EventName="PreviewMouseLeftButtonUp">
-                        <b:InvokeCommandAction Command="{Binding StopSeekingCommand}" />
-                    </b:EventTrigger>
-                </b:Interaction.Triggers>
-            </Slider>
+                        <b:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                            <b:InvokeCommandAction Command="{Binding StopSeekingCommand}" />
+                        </b:EventTrigger>
+                    </b:Interaction.Triggers>
+                </Slider>
 
-            <StackPanel Orientation="Horizontal" Grid.Column="1">
-                <Button Command="{Binding TogglePlayPauseCommand}" ToolTip="Play/Pause (Space)">
-                    <materialDesign:PackIcon Width="24" Height="24"
-                                             Kind="{Binding IsPlaying, Converter={StaticResource BoolToPlayPauseIconConverter}}"/>
-                </Button>
+                <StackPanel Orientation="Horizontal" Grid.Column="1">
+                    <Button Command="{Binding TogglePlayPauseCommand}" ToolTip="Play/Pause (Space)">
+                        <materialDesign:PackIcon Width="24" Height="24"
+                                                 Kind="{Binding IsPlaying, Converter={StaticResource BoolToPlayPauseIconConverter}}"/>
+                    </Button>
+                    
 
                 </StackPanel>
-            
+
             </Grid>
 
             <userControls:NoteHighwayControl Grid.Row="1"
+                                             PixelPerMs="{Binding PixelPerMs}"
                                              Chunk="{Binding SelectedChunk}"
                                              DataContext="{Binding}"
+                                             VisualLatencyInMs="{Binding VisualLatencyInMs}"
                                              CurrentTimeMs="{Binding CurrentSongPositionMs}"/>
+
+            <Grid Grid.Row="2">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Slider Width="200" Value="{Binding PixelPerMs}" Minimum="0.05" Maximum="1"/>
+                    <Slider Width="200" Value="{Binding VisualLatencyInMs}" Minimum="0" Maximum="500"/>
+                </StackPanel>
+            </Grid>
 
         </Grid>
 
