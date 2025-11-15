@@ -68,7 +68,7 @@ public class NoteLaneControl : FrameworkElement
                     x: (note.StartTimeMs - note.DurationMs/2) * _owner.PixelPerMs + 5,
                     y: 5,
                     width: Math.Max(5, note.DurationMs * _owner.PixelPerMs - 10),
-                    height: height - 5)
+                    height: height - 10)
                 , 5, 5);
         }
 
@@ -81,7 +81,7 @@ public class NoteLaneControl : FrameworkElement
                     x: userInput * _owner.PixelPerMs,
                     y: 5,
                     width: 10,
-                    height: height - 5),
+                    height: height - 10),
                 radiusX: 5,
                 radiusY: 5);
         }

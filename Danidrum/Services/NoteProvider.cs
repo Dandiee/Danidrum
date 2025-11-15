@@ -207,7 +207,7 @@ public class LaneContext
     {
         Chunk = chunk;
         NoteNumber = noteNumber;
-        Name = MidiNoteConverter.GetNoteName(noteNumber, Chunk.ChannelId);
+        Name = ArticulationMappings.GetGmNoteName(noteNumber, Chunk.ChannelId);
         Notes = notes.Select(note => new NoteContext(this, note)).ToList();
     }
 }

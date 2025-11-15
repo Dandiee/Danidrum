@@ -74,7 +74,19 @@ public partial class MainWindowViewModel : ObservableObject
         CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
 
-        
+
+        if (SelectedInputDevice != null)
+        {
+            _inputDevice = InputDevice.GetByName(SelectedInputDevice);
+            _inputDevice.EventReceived += OnMidiEvent;
+            _inputDevice.StartEventsListening();
+        }
+
+        _outputDevice = OutputDevice.GetByName(SelectedOutputDevice);
+        _playback = Song.Midi.GetPlayback(_outputDevice);
+        _playback.NoteCallback = NoteCallback;
+        _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
+
     }
 
 
@@ -124,18 +136,11 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void StartPlayback()
     {
-        if (SelectedInputDevice != null)
-        {
-            _inputDevice = InputDevice.GetByName(SelectedInputDevice);
-            _inputDevice.EventReceived += OnMidiEvent;
-            _inputDevice.StartEventsListening();
-        }
-
-        _outputDevice = OutputDevice.GetByName(SelectedOutputDevice);
-        _playback = Song.Midi.GetPlayback(_outputDevice);
-        _playback.NoteCallback = NoteCallback;
-        _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
+        
+        
         _playback.Start();
+        
+        IsPlaying = true;
     }
 
     private void OnMidiEvent(object sender, MidiEventReceivedEventArgs e)
@@ -155,9 +160,10 @@ public partial class MainWindowViewModel : ObservableObject
 
 
     [RelayCommand]
-    private async Task PausePlayback()
+    private void PausePlayback()
     {
         _playback.Stop();
+        IsPlaying = false;
     }
 
     [RelayCommand]
@@ -165,18 +171,19 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (IsPlaying)
         {
-            PausePlaybackCommand.Execute(null);
+            StopPlayback();
         }
         else
         {
-            StartPlaybackCommand.Execute(null);
+            StartPlayback();
         }
     }
 
     [RelayCommand] // This now creates an IAsyncRelayCommand
-    private async Task StopPlayback()
+    private void StopPlayback()
     {
         _playback.Stop();
+        IsPlaying = false;
     }
 
     [RelayCommand]

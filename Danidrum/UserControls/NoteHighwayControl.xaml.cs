@@ -124,7 +124,7 @@ public partial class NoteHighwayControl
         LaneNamesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) });
 
         var laneNameTemplate = TryFindResource("LaneNameTemplate") as DataTemplate;
-        var laneHeight = ActualHeight / Chunk.Lanes.Count;
+        var laneHeight = (ActualHeight - 50) / Chunk.Lanes.Count;
 
         for (var i = 0; i < Chunk.Lanes.Count; i++)
         {
