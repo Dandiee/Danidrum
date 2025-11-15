@@ -25,6 +25,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private double _pixelPerMs = 0.3;
     [ObservableProperty] private double _visualLatencyInMs = 250;
+    [ObservableProperty] private double _speed = 1;
+    [ObservableProperty] private double _bpm = 0;
 
     private OutputDevice _outputDevice;
     [ObservableProperty] private IReadOnlyList<ChunkContext> _chunks;
@@ -44,12 +46,20 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
+    partial void OnSpeedChanged(double value)
+    {
+        _playback.Speed = value;
+        Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute * value;
+    }
+
     [RelayCommand]
     private async Task Loaded()
     {
         IsLoading = true;
         Song = new SongContext("Tool.mid");
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
+        Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
+
         SelectedChunk = Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
         
         _outputDevice = OutputDevice.GetByName("Microsoft GS Wavetable Synth");
