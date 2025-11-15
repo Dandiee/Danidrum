@@ -35,15 +35,16 @@ public class SongContext
     public IReadOnlyList<ChannelContext> Channels { get; }
     public IReadOnlyList<MeasureContext> Measures { get; }
     public double LengthMs { get; }
-
+    public bool IsReduced { get; }
     public IReadOnlyDictionary<string, List<NoteContext>> _lookupTable;
 
-    public SongContext(string midiFilePath)
+    public SongContext(string midiFilePath, bool useReduction)
     {
         Midi = DryWetMidiFile.Read(midiFilePath);
+        IsReduced = useReduction;
         TempoMap = Midi.GetTempoMap();
         var channelGroups = Midi.GetTrackChunks().GroupBy(grp => grp.Events.GetNotes().First().Channel);
-        Channels = channelGroups.Select(grp => new ChannelContext(this, grp)).ToList();
+        Channels = channelGroups.Select(grp => new ChannelContext(this, grp, useReduction)).ToList();
 
         //Chunks = Midi.GetTrackChunks().Select(chunk => new ChunkContext(this, chunk)).OrderBy(e => e.ChannelId).ToList();
         LengthMs = Midi.GetDuration<MetricTimeSpan>().TotalMilliseconds;
@@ -131,18 +132,18 @@ public class MeasureContext
     public TimeSignature TimeSignature { get; set; }
 }
 
-public partial class ChannelContext : ObservableObject
+public sealed class ChannelContext
 {
     public TrackChunk TrackChunk { get; }
     public IReadOnlyList<ChunkContext> Chunks { get; }
     public SongContext Song { get; }
     public FourBitNumber ChannelId { get; }
 
-    public ChannelContext(SongContext song, IGrouping<FourBitNumber, TrackChunk> channelGroup)
+    public ChannelContext(SongContext song, IGrouping<FourBitNumber, TrackChunk> channelGroup, bool useReduction)
     {
         Song = song;
         ChannelId = channelGroup.Key;
-        Chunks = channelGroup.Select(chunk => new ChunkContext(this, chunk)).ToList();
+        Chunks = channelGroup.Select(chunk => new ChunkContext(this, chunk, useReduction)).ToList();
     }
 }
 
@@ -162,9 +163,9 @@ public partial class ChunkContext : ObservableObject
 
     [ObservableProperty] private bool _isMuted = false;
 
-    private readonly IReadOnlyDictionary<KitArticulation, LaneContext> _lanesByNumbers;
+    private readonly IReadOnlyDictionary<int, LaneContext> _lanesByNumbers;
 
-    public ChunkContext(ChannelContext channel, TrackChunk trackChunk)
+    public ChunkContext(ChannelContext channel, TrackChunk trackChunk, bool useReduction)
     {
         Channel = channel;
         TrackChunk = trackChunk;
@@ -176,16 +177,18 @@ public partial class ChunkContext : ObservableObject
         IsLikelyDrumTrack = DrumKeywords.Any(key => Name.Contains(key, StringComparison.OrdinalIgnoreCase) 
                                                     || InstrumentName.Contains(key, StringComparison.OrdinalIgnoreCase));
 
-        var notesByNumbers = notes.GroupBy(e => Articulation.GetKitArticulation(e.NoteNumber));
+        var notesByNumbers = notes.GroupBy(e => useReduction
+            ? (int)Articulation.GetKitArticulation(e.NoteNumber) 
+            : e.NoteNumber);
 
         //Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList())).ToList();
-        Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList())).ToList();
-        _lanesByNumbers = Lanes.ToDictionary(e => e.KitArticulation);
+        Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList(), useReduction)).OrderBy(lane => lane.LaneId).ToList();
+        _lanesByNumbers = Lanes.ToDictionary(e => e.LaneId);
     }
 
-    public bool TryGetLane(KitArticulation kitArticulation, out LaneContext lane)
+    public bool TryGetLane(int laneId, out LaneContext lane)
     {
-        if (_lanesByNumbers.TryGetValue(kitArticulation, out var cachedLane))
+        if (_lanesByNumbers.TryGetValue(laneId, out var cachedLane))
         {
             lane = cachedLane;
             return true;
@@ -199,17 +202,19 @@ public partial class ChunkContext : ObservableObject
 public class LaneContext
 {
     public ChunkContext Chunk { get; }
-    public KitArticulation KitArticulation { get; }
+    public int LaneId { get; }
     public string Name { get; }
     public IReadOnlyList<NoteContext> Notes {get;}
     public EventHandler StateChanged { get; set; }
     public EventHandler<InputArg> InputReceived { get; set; }
 
-    public LaneContext(ChunkContext chunk, KitArticulation kitArticulation, IReadOnlyList<Note> notes)
+    public LaneContext(ChunkContext chunk, int laneId, IReadOnlyList<Note> notes, bool useReduction)
     {
         Chunk = chunk;
-        KitArticulation = kitArticulation;
-        Name = Articulation.KitArticulationToName[kitArticulation];
+        LaneId = laneId;
+        Name = useReduction 
+            ? Articulation.KitArticulationToName[(KitArticulation)LaneId]
+            : Articulation.GetGmNoteName(LaneId, Chunk.ChannelId);
         Notes = notes.Select(note => new NoteContext(this, note)).ToList();
     }
 }

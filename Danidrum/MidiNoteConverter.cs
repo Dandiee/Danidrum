@@ -82,15 +82,19 @@ public enum DrumArticulation
 public enum KitArticulation
 {
     // Cymbals
-    Crash = 0,
+    Crash,
     Ride,
+
+    // Toms
+    HighTom,
+    MidTom,
+    LowTom,
+
+    //HiHat
     OpenHiHat,
     ClosedHiHat,
 
     // Drums
-    HighTom,
-    MidTom,
-    LowTom,
     Snare,
     Kick,
 
@@ -404,12 +408,7 @@ public static class Articulation
         if (channelId == 9)
         {
             var drumArticulation = GmNoteToArticulation[gmNoteNumber];
-            var kitArticulation = ArticulationToKitArticulation[drumArticulation];
-            var name = KitArticulationToName[kitArticulation];
-
-            return name;
-
-            return $"{gmNoteNumber}";
+            return ArticulationToName[drumArticulation];
         }
 
         // Otherwise, just use the standard note name

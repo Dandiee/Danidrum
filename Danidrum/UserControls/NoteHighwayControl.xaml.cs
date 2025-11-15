@@ -28,10 +28,6 @@ public class MidLineConverter : IValueConverter
 
 public partial class NoteHighwayControl
 {
-    //public static double PixelPerSecond = 300;
-    //public static double PixelPerMs = PixelPerSecond / 1000;
-    //public static double VisualLatency = 400;
-
     public NoteHighwayControl()
     {
         InitializeComponent();

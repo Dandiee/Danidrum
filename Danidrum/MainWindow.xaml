@@ -184,6 +184,8 @@
                     <Slider Value="{Binding Speed}" Minimum="0.01" Maximum="2" Width="200"/>
                     <TextBlock Text="{Binding Bpm, StringFormat={}{0:F0} BPM}"/>
 
+                    <ToggleButton IsChecked="{Binding IsReduced}"/>
+
                 </StackPanel>
 
             </Grid>

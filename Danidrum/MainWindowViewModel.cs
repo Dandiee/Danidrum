@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<string> _outputDevices;
     [ObservableProperty] private string _selectedOutputDevice;
     [ObservableProperty] private string _selectedInputDevice;
+    [ObservableProperty] private bool _isReduced;
 
 
     [ObservableProperty] private SongContext _song;
@@ -49,31 +50,47 @@ public partial class MainWindowViewModel : ObservableObject
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute * value;
     }
 
+    partial void OnIsReducedChanged(bool value)
+    {
+        if (IsPlaying)
+        {
+            StopPlayback();
+        }
+        LoadSong();
+    }
+
+    private void LoadSong()
+    {
+        Song = new SongContext("Tool.mid", IsReduced);
+        Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
+        Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
+        MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
+        SelectedChunk = Chunks.SingleOrDefault(e => e.ChannelId == 9 && e.IsLikelyDrumTrack) ??
+                        Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
+        CompositionTarget.Rendering += CompositionTarget_Rendering;
+        IsLoading = false;
+
+        if (_playback != null)
+        {
+            _playback.NotesPlaybackFinished -= PlaybackOnNotesPlaybackFinished;
+            _playback.NoteCallback = null;
+            _playback.Dispose();
+            _playback = null;
+        }
+
+        _playback = Song.Midi.GetPlayback(_outputDevice);
+        _playback.NoteCallback = NoteCallback;
+        _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
+    }
+
     [RelayCommand]
     private async Task Loaded()
     {
-        IsLoading = true;
-        
         InputDevices = InputDevice.GetAll().Select(e => e.Name).ToList();
         OutputDevices = OutputDevice.GetAll().Select(e => e.Name).ToList();
 
         SelectedInputDevice = InputDevices.FirstOrDefault();
         SelectedOutputDevice = OutputDevices.FirstOrDefault();
-
-        if (SelectedOutputDevice == null)
-        {
-            MessageBox.Show("No output device :(");
-            Application.Current.Shutdown();
-        }
-
-        Song = new SongContext("Test.mid");
-        Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
-        Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
-        MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
-        SelectedChunk = Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
-        CompositionTarget.Rendering += CompositionTarget_Rendering;
-        IsLoading = false;
-
 
         if (SelectedInputDevice != null)
         {
@@ -83,10 +100,14 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         _outputDevice = OutputDevice.GetByName(SelectedOutputDevice);
-        _playback = Song.Midi.GetPlayback(_outputDevice);
-        _playback.NoteCallback = NoteCallback;
-        _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
 
+        if (SelectedOutputDevice == null)
+        {
+            MessageBox.Show("No output device :(");
+            Application.Current.Shutdown();
+        }
+
+        LoadSong();
     }
 
 
@@ -147,8 +168,11 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (e.Event is NoteOnEvent noteOn)
         {
-            var articulation = Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[noteOn.NoteNumber]];
-            if (SelectedChunk.TryGetLane(articulation, out var lane))
+            var laneId = Song.IsReduced
+                ? (int)Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[noteOn.NoteNumber]]
+                : noteOn.NoteNumber;
+
+            if (SelectedChunk.TryGetLane(laneId, out var lane))
             {
                 lane.InputReceived?.Invoke(this, new InputArg(noteOn.NoteNumber, _currentSongPositionMs));
             }
