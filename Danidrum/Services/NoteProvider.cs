@@ -57,7 +57,7 @@ public class SongContext
 
     private string GetId(Note note) => $"{note.Channel}{note.NoteNumber}{note.Time}{note.EndTime}{note.Length}{note.Octave}{note.Velocity}";
 
-    public List<NoteContext> GetNoteContexts(Note note) => _lookupTable[GetId(note)];
+    public List<NoteContext> GetNoteContexts(Note note) => _lookupTable.TryGetValue(GetId(note), out var ctx) ? ctx : null;
 
     private static List<MeasureContext> Extract(TempoMap tempoMap, long endTime)
     {

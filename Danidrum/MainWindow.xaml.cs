@@ -10,6 +10,8 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         DataContext = App.Services.GetRequiredService<MainWindowViewModel>();
+
+
             
     }
 }

@@ -1,11 +1,12 @@
-﻿using System.Collections.Immutable;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Danidrum.Services;
 using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
 using Melanchall.DryWetMidi.Multimedia;
+using System.Collections.Immutable;
 using System.Windows;
+using System.Windows.Media;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 
 namespace Danidrum;
@@ -19,6 +20,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private ChunkContext _selectedChunk;
     [ObservableProperty] private double _currentSongPositionMs;
     [ObservableProperty] private bool _isPlaying;
+    [ObservableProperty] private DoubleCollection _measureStartTimesInMs;
 
 
     [ObservableProperty] private SongContext _song;
@@ -56,9 +58,10 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task Loaded()
     {
         IsLoading = true;
-        Song = new SongContext("Tool.mid");
+        Song = new SongContext("Test.mid");
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
+        MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
 
         SelectedChunk = Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
         
@@ -98,7 +101,7 @@ public partial class MainWindowViewModel : ObservableObject
         foreach (var note in e.Notes)
         {
             var ctx = Song.GetNoteContexts(note);
-            if (ctx.Count == 1)
+            if (ctx != null && ctx.Count == 1)
             {
                 if (SelectedChunk.ChannelId == ctx[0].Lane.Chunk.ChannelId)
                 {
@@ -110,8 +113,10 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void CompositionTarget_Rendering(object? sender, EventArgs e)
     {
-        CurrentSongPositionMs = _playback.GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
-        
+        if (!_isUserSeeking)
+        {
+            CurrentSongPositionMs = _playback.GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
+        }
     }
 
     [RelayCommand]
@@ -147,12 +152,17 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void StartSeeking() => _isUserSeeking = true;
+    private void StartSeeking()
+    {
+        _isUserSeeking = true;
+        _playback.Stop();
+    }
 
     [RelayCommand]
     private async Task StopSeeking()
     {
-        //_playbackService.SeekTo((long)CurrentSongPositionMs);
+        _playback.Start();
+        _playback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentSongPositionMs)));
         _isUserSeeking = false;
     }
 }

@@ -8,6 +8,7 @@
         d:DataContext="{d:DesignInstance IsDesignTimeCreatable=False, Type=local:MainWindowViewModel}"
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        
         xmlns:services="clr-namespace:Danidrum.Services" 
         xmlns:userControls="clr-namespace:Danidrum.UserControls"
         Title="MainWindow" Height="800" Width="1800"
@@ -156,6 +157,9 @@
                 <Slider x:Name="PositionSlider"
                         Grid.Column="0"
                         Minimum="0"
+                        Ticks="{Binding MeasureStartTimesInMs}"
+                        IsSnapToTickEnabled="True"
+                        TickPlacement="BottomRight"
                         Maximum="{Binding Song.LengthMs}"
                         Value="{Binding CurrentSongPositionMs}"
                         Style="{StaticResource MaterialDesign3.MaterialDesignSlider}">
