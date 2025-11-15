@@ -43,7 +43,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         IsLoading = true;
         //await LoadMidiFileAsync(@"c:\Users\koczu\Downloads\Nirvana-Come As You Are-11-11-2025.mid");
-        await LoadMidiFileAsync(@"c:\Users\koczu\Downloads\Blink - 182-Whats my age again-05-03-2025.mid");
+        await LoadMidiFileAsync("Test.mid");
         IsLoading = false;
     }
 

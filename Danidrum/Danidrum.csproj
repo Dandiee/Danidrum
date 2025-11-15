@@ -20,4 +20,10 @@
     <PackageReference Include="NAudio.Midi" Version="2.2.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Test.mid">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
