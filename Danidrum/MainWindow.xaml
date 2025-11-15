@@ -182,6 +182,7 @@
 
             <userControls:NoteHighwayControl Grid.Row="1"
                                              DataContext="{Binding}"
+                                             NoteLanes="{Binding NoteLanes}"
                                              CurrentTimeMs="{Binding CurrentSongPositionMs}"
                                              SongTotalWidth="{Binding TotalSongWidth}"
                                              TotalSongDurationMs="{Binding TotalSongDurationMs}"

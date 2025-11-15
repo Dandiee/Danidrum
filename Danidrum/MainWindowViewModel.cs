@@ -211,7 +211,9 @@ public partial class MainWindowViewModel : ObservableObject
         Bars = bars.Select(bar => new BarViewModel()
         {
             X = bar.StartTimeMs * pxPerMs,
-            TimeSignature = $"{bar.TimeSignature.Numerator}/{bar.TimeSignature.Denominator}"
+            TimeSignature = $"{bar.TimeSignature.Numerator}/{bar.TimeSignature.Denominator}",
+            MeasureIndex = bar.MeasureIndex,
+            DisplayText = $"{bar.MeasureIndex} ({bar.TimeSignature.Numerator}/{bar.TimeSignature.Denominator})"
         }).ToList();
 
         SelectedTrack = Tracks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Tracks.FirstOrDefault();
