@@ -1,13 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Danidrum.Services;
-using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
 using Melanchall.DryWetMidi.Multimedia;
-using System.Collections.Immutable;
-using System.Windows;
 using System.Windows.Media;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
+using Melanchall.DryWetMidi.Core;
 
 namespace Danidrum;
 
@@ -21,6 +19,10 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private double _currentSongPositionMs;
     [ObservableProperty] private bool _isPlaying;
     [ObservableProperty] private DoubleCollection _measureStartTimesInMs;
+    [ObservableProperty] private IReadOnlyList<string> _inputDevices;
+    [ObservableProperty] private IReadOnlyList<string> _outputDevices;
+    [ObservableProperty] private string _selectedOutputDevice;
+    [ObservableProperty] private string _selectedInputDevice;
 
 
     [ObservableProperty] private SongContext _song;
@@ -31,22 +33,13 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private double _bpm = 0;
 
     private OutputDevice _outputDevice;
+    private InputDevice _inputDevice;
     [ObservableProperty] private IReadOnlyList<ChunkContext> _chunks;
 
     private HashSet<int> _mutedChannels = new();
 
     private bool _isUserSeeking = false;
 
-    private void OnPlaybackPositionChanged(long currentTimeMs)
-    {
-        Application.Current?.Dispatcher?.Invoke(() =>
-        {
-            if (!_isUserSeeking)
-            {
-                CurrentSongPositionMs = currentTimeMs;
-            }
-        });
-    }
 
     partial void OnSpeedChanged(double value)
     {
@@ -58,23 +51,30 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task Loaded()
     {
         IsLoading = true;
+        
+        InputDevices = InputDevice.GetAll().Select(e => e.Name).ToList();
+        OutputDevices = OutputDevice.GetAll().Select(e => e.Name).ToList();
+
+        SelectedInputDevice = InputDevices.FirstOrDefault();
+        SelectedOutputDevice = OutputDevices.FirstOrDefault();
+
+        if (SelectedOutputDevice == null)
+        {
+            MessageBox.Show("No output device :(");
+            Application.Current.Shutdown();
+        }
+
         Song = new SongContext("Test.mid");
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
         MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
-
         SelectedChunk = Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
-        
-        _outputDevice = OutputDevice.GetByName("Microsoft GS Wavetable Synth");
-        _playback = Song.Midi.GetPlayback(_outputDevice);
-        _playback.NoteCallback = NoteCallback;
-        _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
-        
-        System.Windows.Media.CompositionTarget.Rendering += CompositionTarget_Rendering;
+        CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
 
-        _playback.Start();
+        
     }
+
 
     private NotePlaybackData NoteCallback(NotePlaybackData rawNoteData, long rawTime, long rawLength, TimeSpan playbackTime)
     {
@@ -113,7 +113,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void CompositionTarget_Rendering(object? sender, EventArgs e)
     {
-        if (!_isUserSeeking)
+        if (_playback != null && !_isUserSeeking)
         {
             CurrentSongPositionMs = _playback.GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
         }
@@ -122,7 +122,36 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void StartPlayback()
     {
+        if (SelectedInputDevice != null)
+        {
+            _inputDevice = InputDevice.GetByName(SelectedInputDevice);
+            _inputDevice.EventReceived += OnMidiEvent;
+            _inputDevice.StartEventsListening();
+        }
+
+        _outputDevice = OutputDevice.GetByName(SelectedOutputDevice);
+        _playback = Song.Midi.GetPlayback(_outputDevice);
+        _playback.NoteCallback = NoteCallback;
+        _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
         _playback.Start();
+    }
+
+    private void OnMidiEvent(object sender, MidiEventReceivedEventArgs e)
+    {
+        var midiEvent = e.Event;
+
+        if (midiEvent is NoteOnEvent noteOn)
+        {
+            int note = noteOn.NoteNumber;
+            int velocity = noteOn.Velocity;
+
+            // Process drum hit
+            Console.WriteLine($"Hit: {note} velocity {velocity}");
+        }
+        else if (midiEvent is ControlChangeEvent cc)
+        {
+            Console.WriteLine($"CC {cc.ControlNumber} value {cc.ControlValue}");
+        }
     }
 
 

@@ -172,7 +172,7 @@ public partial class NoteHighwayControl
 
         if (control.NoteCanvasScroller == null || control.Chunk == null || control.Chunk.Channel.Song.LengthMs == 0) return;
 
-        var ratio = (control.CurrentTimeMs - control.VisualLatencyInMs) / control.Chunk.Channel.Song.LengthMs;
+        var ratio = (control.CurrentTimeMs /*- control.VisualLatencyInMs*/) / control.Chunk.Channel.Song.LengthMs;
         var here = (control.NoteCanvasScroller.ExtentWidth - control.NoteCanvasScroller.ActualWidth / 2) * ratio;
         control.NoteCanvasScroller.ScrollToHorizontalOffset(here);
     }
