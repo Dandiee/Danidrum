@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
+using Melanchall.DryWetMidi.Interaction;
 
 namespace Danidrum.ViewModels;
 
@@ -12,6 +13,12 @@ public partial class NoteViewModel : ObservableObject
     // The width of the rectangle
     [ObservableProperty]
     private double _canvasWidth;
+
+    public Note Note { get; set; }
+    public double StartTimeMs { get; set; }
+    public double DurationMs { get; set; }
+
+
 }
 
 public partial class NoteLaneViewModel : ObservableObject

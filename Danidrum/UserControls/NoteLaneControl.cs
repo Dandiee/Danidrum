@@ -10,8 +10,9 @@ namespace Danidrum.UserControls;
 
 public class NoteLaneControl : FrameworkElement
 {
-    private static readonly SolidColorBrush NoteBrush = new SolidColorBrush(Color.FromRgb(33, 150, 243)); // Material Blue
-    private static readonly SolidColorBrush BackgroundBrush = new SolidColorBrush(Color.FromRgb(250, 250, 250));
+    private static readonly SolidColorBrush NoteBrush = new(Color.FromRgb(33, 150, 243)); // Material Blue
+    private static readonly SolidColorBrush MissedNoteBrush = new(Color.FromRgb(255, 0, 0)); // Material Blue
+    private static readonly SolidColorBrush BackgroundBrush = new(Color.FromRgb(250, 250, 250));
 
     static NoteLaneControl()
     {
@@ -28,13 +29,10 @@ public class NoteLaneControl : FrameworkElement
 
     #region Dependency Properties
 
-    public static readonly DependencyProperty NotesProperty = DependencyProperty.Register(
-    nameof(Notes), typeof(IEnumerable), typeof(NoteLaneControl),
-    new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnNotesChanged));
-
-    public IEnumerable Notes
+    public static readonly DependencyProperty NotesProperty = DependencyProperty.Register( nameof(Notes), typeof(IEnumerable<NoteViewModel>), typeof(NoteLaneControl), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnNotesChanged));
+    public IEnumerable<NoteViewModel> Notes
     {
-        get => (IEnumerable)GetValue(NotesProperty);
+        get => (IEnumerable<NoteViewModel>)GetValue(NotesProperty);
         set => SetValue(NotesProperty, value);
     }
 
@@ -46,10 +44,7 @@ public class NoteLaneControl : FrameworkElement
         control.InvalidateVisual();
     }
 
-    public static readonly DependencyProperty NoteHeightProperty = DependencyProperty.Register(
-    nameof(NoteHeight), typeof(double), typeof(NoteLaneControl),
-    new FrameworkPropertyMetadata(20.0, FrameworkPropertyMetadataOptions.AffectsRender, OnSimplePropertyChanged));
-
+    public static readonly DependencyProperty NoteHeightProperty = DependencyProperty.Register(nameof(NoteHeight), typeof(double), typeof(NoteLaneControl), new FrameworkPropertyMetadata(20.0, FrameworkPropertyMetadataOptions.AffectsRender, OnSimplePropertyChanged));
     public double NoteHeight
     {
         get => (double)GetValue(NoteHeightProperty);
@@ -81,12 +76,6 @@ public class NoteLaneControl : FrameworkElement
         Application.Current?.Dispatcher?.InvokeAsync(InvalidateVisual);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
-    {
-        // Let the parent size the control (usually the Canvas sets Width to song width and Height to lane height)
-        return base.MeasureOverride(availableSize);
-    }
-
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc);
@@ -112,7 +101,10 @@ public class NoteLaneControl : FrameworkElement
                     continue;
 
                 var rect = new Rect(x, y, w, NoteHeight);
-                dc.DrawRoundedRectangle(NoteBrush, null, rect, Math.Min(5, NoteHeight / 2.0), Math.Min(5, NoteHeight / 2.0));
+
+                var vm = this.DataContext as MainWindowViewModel;
+                var brush = vm.CurrentSongPositionMs > note.StartTimeMs ? MissedNoteBrush : NoteBrush;
+                dc.DrawRoundedRectangle(brush, null, rect, Math.Min(5, NoteHeight / 2.0), Math.Min(5, NoteHeight / 2.0));
             }
         }
     }

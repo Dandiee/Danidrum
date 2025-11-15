@@ -116,7 +116,8 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task Loaded()
     {
         IsLoading = true;
-        await LoadMidiFileAsync(@"c:\Users\koczu\Downloads\Nirvana-Come As You Are-11-11-2025.mid");
+        //await LoadMidiFileAsync(@"c:\Users\koczu\Downloads\Nirvana-Come As You Are-11-11-2025.mid");
+        await LoadMidiFileAsync(@"c:\Users\koczu\Downloads\Blink - 182-Whats my age again-05-03-2025.mid");
         IsLoading = false;
     }
 
@@ -153,10 +154,17 @@ public partial class MainWindowViewModel : ObservableObject
                 double startMs = startTime.TotalMilliseconds;
                 double durMs = duration.TotalMilliseconds;
 
+                // this is correct but without margin
+                //CanvasLeft = (startMs * pxPerMs) - ((durMs * pxPerMs) / 2),
+                //CanvasWidth = Math.Max(1.0, durMs * pxPerMs)
+
                 var noteViewModel = new NoteViewModel
                 {
-                    CanvasLeft = startMs * pxPerMs,
-                    CanvasWidth = Math.Max(1.0, durMs * pxPerMs)
+                    CanvasLeft = (startMs * pxPerMs) - ((durMs* pxPerMs)/ 2) + 5,
+                    CanvasWidth = Math.Max(1.0, durMs * pxPerMs) - 10,
+                    StartTimeMs = startMs,
+                    DurationMs = durMs,
+                    Note = note,
                 };
 
                 lane.Notes.Add(noteViewModel);
