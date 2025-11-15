@@ -32,7 +32,6 @@ public class NoteLaneControl : FrameworkElement
         base.OnRender(dc);
 
         var height = (Parent as Grid).ActualHeight / _lane.Chunk.Lanes.Count;
-        var y = height / 2;
 
         foreach (var note in _lane.Notes)
         {
@@ -41,9 +40,9 @@ public class NoteLaneControl : FrameworkElement
                 pen:null,
                 rectangle: new Rect(
                     x: (note.StartTimeMs - note.DurationMs/2) * NoteHighwayControl.PixelPerMs + 5,
-                    y: y + 5,
+                    y: 5,
                     width: note.DurationMs * NoteHighwayControl.PixelPerMs - 10,
-                    height: height - 10)
+                    height: height - 5)
                 , 5, 5);
         }
     }

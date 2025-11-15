@@ -14,11 +14,12 @@
         <DataTemplate x:Key="LaneNameTemplate" DataType="{x:Type services:LaneContext}">
             <Border Height="100"
                     BorderBrush="{DynamicResource MaterialDesign.Brush.OutlineVariant}"
+                    VerticalAlignment="Center"
                     BorderThickness="0,0,1,1">
                 <TextBlock Text="{Binding Name}"
                            Style="{StaticResource MaterialDesignBody1TextBlock}"
-                           VerticalAlignment="Center"
                            Margin="10,0"
+                           VerticalAlignment="Center"
                            TextTrimming="CharacterEllipsis"/>
             </Border>
         </DataTemplate>
