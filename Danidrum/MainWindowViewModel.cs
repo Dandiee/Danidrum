@@ -145,8 +145,9 @@ public partial class MainWindowViewModel : ObservableObject
             if (SelectedChunk.TryGetLane(noteOn.NoteNumber, out var lane))
             {
                 lane.InputReceived?.Invoke(this, new InputArg(noteOn.NoteNumber, _currentSongPositionMs));
-                Debug.WriteLine($"{noteOn.NoteNumber}, {noteOn.Channel}, {noteOn.EventType}");
             }
+
+            Debug.WriteLine($"{noteOn.NoteNumber}, {noteOn.Channel}, {noteOn.EventType}");
         }
     }
 
