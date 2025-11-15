@@ -162,7 +162,7 @@ public partial class ChunkContext : ObservableObject
 
     [ObservableProperty] private bool _isMuted = false;
 
-    private readonly IReadOnlyDictionary<SevenBitNumber, LaneContext> _lanesByNumbers;
+    private readonly IReadOnlyDictionary<KitArticulation, LaneContext> _lanesByNumbers;
 
     public ChunkContext(ChannelContext channel, TrackChunk trackChunk)
     {
@@ -176,14 +176,16 @@ public partial class ChunkContext : ObservableObject
         IsLikelyDrumTrack = DrumKeywords.Any(key => Name.Contains(key, StringComparison.OrdinalIgnoreCase) 
                                                     || InstrumentName.Contains(key, StringComparison.OrdinalIgnoreCase));
 
-        var notesByNumbers = notes.GroupBy(e => e.NoteNumber);
+        var notesByNumbers = notes.GroupBy(e => Articulation.GetKitArticulation(e.NoteNumber));
+
+        //Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList())).ToList();
         Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList())).ToList();
-        _lanesByNumbers = Lanes.ToDictionary(e => e.NoteNumber);
+        _lanesByNumbers = Lanes.ToDictionary(e => e.KitArticulation);
     }
 
-    public bool TryGetLane(SevenBitNumber noteNumber, out LaneContext lane)
+    public bool TryGetLane(KitArticulation kitArticulation, out LaneContext lane)
     {
-        if (_lanesByNumbers.TryGetValue(noteNumber, out var cachedLane))
+        if (_lanesByNumbers.TryGetValue(kitArticulation, out var cachedLane))
         {
             lane = cachedLane;
             return true;
@@ -197,17 +199,17 @@ public partial class ChunkContext : ObservableObject
 public class LaneContext
 {
     public ChunkContext Chunk { get; }
-    public SevenBitNumber NoteNumber { get; }
+    public KitArticulation KitArticulation { get; }
     public string Name { get; }
     public IReadOnlyList<NoteContext> Notes {get;}
     public EventHandler StateChanged { get; set; }
     public EventHandler<InputArg> InputReceived { get; set; }
 
-    public LaneContext(ChunkContext chunk, SevenBitNumber noteNumber, IReadOnlyList<Note> notes)
+    public LaneContext(ChunkContext chunk, KitArticulation kitArticulation, IReadOnlyList<Note> notes)
     {
         Chunk = chunk;
-        NoteNumber = noteNumber;
-        Name = ArticulationMappings.GetGmNoteName(noteNumber, Chunk.ChannelId);
+        KitArticulation = kitArticulation;
+        Name = Articulation.KitArticulationToName[kitArticulation];
         Notes = notes.Select(note => new NoteContext(this, note)).ToList();
     }
 }

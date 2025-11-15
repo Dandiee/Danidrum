@@ -101,9 +101,18 @@ public enum KitArticulation
     OtherPercussion
 }
 
-public static class ArticulationMappings
+public static class Articulation
 {
 
+    public static KitArticulation GetKitArticulation(int gmNoteNumber)
+    {
+        if (!GmNoteToArticulation.TryGetValue(gmNoteNumber, out var drumArticulation))
+        {
+            return KitArticulation.OtherPercussion;
+        }
+
+        return ArticulationToKitArticulation[drumArticulation];
+    }
 
 
     public static readonly IReadOnlyDictionary<DrumArticulation, string> ArticulationToName = new Dictionary<DrumArticulation, string>

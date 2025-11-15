@@ -147,7 +147,8 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (e.Event is NoteOnEvent noteOn)
         {
-            if (SelectedChunk.TryGetLane(noteOn.NoteNumber, out var lane))
+            var articulation = Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[noteOn.NoteNumber]];
+            if (SelectedChunk.TryGetLane(articulation, out var lane))
             {
                 lane.InputReceived?.Invoke(this, new InputArg(noteOn.NoteNumber, _currentSongPositionMs));
             }
