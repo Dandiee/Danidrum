@@ -7,7 +7,9 @@
              xmlns:local="clr-namespace:Danidrum.UserControls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-
+<UserControl.Resources>
+        <local:MidLineConverter x:Key="MidLineConverter"/>
+    </UserControl.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="200"/>
@@ -19,8 +21,7 @@
                       x:Name="LaneNameScroller"
                       VerticalScrollBarVisibility="Hidden"
                       HorizontalScrollBarVisibility="Hidden"
-                      HorizontalAlignment="Stretch"
-                      ScrollChanged="LaneNameScroller_ScrollChanged">
+                      HorizontalAlignment="Stretch">
             <ItemsControl ItemsSource="{Binding NoteLanes}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type viewmodels:NoteLaneViewModel}">
@@ -43,11 +44,11 @@
 
             <ScrollViewer x:Name="NoteCanvasScroller"
                           SizeChanged="NoteCanvasScroller_SizeChanged"
-                          VerticalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Hidden"
                           HorizontalScrollBarVisibility="Auto"
                           ScrollChanged="NoteCanvasScroller_ScrollChanged"
                           CanContentScroll="False">
-                <Grid>
+                <Grid Margin="{Binding ElementName=NoteCanvasScroller, Path=ActualWidth, Converter={StaticResource MidLineConverter}}">
 
                     <!-- BAR LINES (drawn behind notes) -->
                     <ItemsControl ItemsSource="{Binding Bars}">

@@ -11,7 +11,7 @@
         xmlns:services="clr-namespace:Danidrum.Services" 
         xmlns:viewmodels="clr-namespace:Danidrum.ViewModels" 
         xmlns:userControls="clr-namespace:Danidrum.UserControls"
-        Title="MainWindow" Height="450" Width="800"
+        Title="MainWindow" Height="800" Width="1800"
         Background="{StaticResource MaterialDesignPaper}"
         TextElement.Foreground="{StaticResource MaterialDesignBody}">
 
@@ -184,6 +184,7 @@
                                              DataContext="{Binding}"
                                              CurrentTimeMs="{Binding CurrentSongPositionMs}"
                                              SongTotalWidth="{Binding TotalSongWidth}"
+                                             TotalSongDurationMs="{Binding TotalSongDurationMs}"
                                              LanesCount="{Binding NoteLanes.Count}"
                                              PixelsPerSecond="{Binding PixelsPerSecond}" />
 

@@ -1,13 +1,32 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace Danidrum.UserControls;
 
+public class MidLineConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is double viewportWidth)
+        {
+            return new Thickness(viewportWidth / 2.0, 0, 0, 0);
+        }
+
+        return new Thickness();
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
 public partial class NoteHighwayControl : UserControl
 {
-    // prevent recursive sync
-    private bool _isSyncingScroll = false;
 
     public NoteHighwayControl()
     {
@@ -59,6 +78,14 @@ public partial class NoteHighwayControl : UserControl
         set => SetValue(SongTotalWidthProperty, value);
     }
 
+    public static readonly DependencyProperty TotalSongDurationMsProperty = DependencyProperty.Register(
+        nameof(TotalSongDurationMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(default(double)));
+    public double TotalSongDurationMs
+    {
+        get { return (double)GetValue(TotalSongDurationMsProperty); }
+        set { SetValue(TotalSongDurationMsProperty, value); }
+    }
+
     public static readonly DependencyProperty NotePaddingProperty =
         DependencyProperty.Register(nameof(NotePadding), typeof(Thickness), typeof(NoteHighwayControl),
             new PropertyMetadata(default(Thickness)));
@@ -82,7 +109,7 @@ public partial class NoteHighwayControl : UserControl
     private static void OnLanesCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var control = (NoteHighwayControl)d;
-        control.UpdateLaneSizes();
+        control.UpdateLaneSizes(new Size(control.NoteCanvasScroller.ActualWidth, control.NoteCanvasScroller.ActualHeight));
     }
 
     public static readonly DependencyProperty LaneHeightProperty =
@@ -123,60 +150,29 @@ public partial class NoteHighwayControl : UserControl
         NoteHeight = Math.Max(4, LaneHeight - 10); // leave a small margin, min height 4
     }
 
-    // When the scroller is resized (e.g., window resized)
     private void NoteCanvasScroller_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // Update lane sizes based on viewport
         UpdateLaneSizes(e.NewSize);
-
-        // Update padding so content won't be clipped at edges (optional small left padding)
-        // Keeping left padding 0 keeps absolute pixel mapping simple.
-        // If you want to center playhead visually, the scroll math uses viewport width.
     }
 
     // Center playhead in viewport (clamped)
     private void UpdateScrollPosition()
     {
-        if (NoteCanvasScroller == null) return;
+        if (NoteCanvasScroller == null || TotalSongDurationMs == 0) return;
 
-        double playheadPixelPos = CurrentTimeMs * PxPerMs;
-
-        // Center on playhead:
-        double viewportWidth = NoteCanvasScroller.ViewportWidth;
-        if (double.IsNaN(viewportWidth) || viewportWidth <= 0)
-        {
-            // If viewport not ready, do a best-effort scroll to exact pixel
-            NoteCanvasScroller.ScrollToHorizontalOffset(playheadPixelPos);
-            return;
-        }
-
-        double targetOffset = playheadPixelPos - (viewportWidth / 2.0);
-
-        // Clamp between 0 and maximum scrollable width
-        double maxOffset = Math.Max(0, SongTotalWidth - viewportWidth);
-        if (targetOffset < 0) targetOffset = 0;
-        if (targetOffset > maxOffset) targetOffset = maxOffset;
-
-        NoteCanvasScroller.ScrollToHorizontalOffset(targetOffset);
+        var ratio = CurrentTimeMs / TotalSongDurationMs;
+        var here = (NoteCanvasScroller.ExtentWidth - (NoteCanvasScroller.ActualWidth / 2)) * ratio;
+        NoteCanvasScroller.ScrollToHorizontalOffset(here);
+        
     }
 
-    // Sync vertical scroll between lane names and canvas
+    private bool _isSyncingScroll;
     private void NoteCanvasScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         if (e.VerticalChange != 0 && !_isSyncingScroll)
         {
             _isSyncingScroll = true;
             LaneNameScroller.ScrollToVerticalOffset(e.VerticalOffset);
-            _isSyncingScroll = false;
-        }
-    }
-
-    private void LaneNameScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
-    {
-        if (e.VerticalChange != 0 && !_isSyncingScroll)
-        {
-            _isSyncingScroll = true;
-            NoteCanvasScroller.ScrollToVerticalOffset(e.VerticalOffset);
             _isSyncingScroll = false;
         }
     }
