@@ -58,7 +58,6 @@
                             <DataTemplate DataType="{x:Type viewmodels:BarViewModel}">
                                 <Grid>
                                 <!-- thin vertical line; height stretched via container canvas -->
-
                                 <Rectangle Width="2"
                                            Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
                                            Fill="Blue"
@@ -66,14 +65,14 @@
                                            IsHitTestVisible="False"/>
 
                                 <!-- Label for the bar: measure index and time signature -->
-                                <TextBlock Text="{Binding DisplayText}"
+                                <!--<TextBlock Text="{Binding DisplayText}"
                                            FontSize="11"
                                            Margin="6,4,6,0"
                                            VerticalAlignment="Top"
                                            HorizontalAlignment="Left"
                                            Foreground="{DynamicResource MaterialDesignBody}"
                                            IsHitTestVisible="False"
-                                           TextTrimming="CharacterEllipsis" />
+                                           TextTrimming="CharacterEllipsis" />-->
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -88,6 +87,35 @@
 
                     <!-- NOTE LANES - lightweight drawing control placed in Grid rows -->
                     <Grid x:Name="LanesGrid" Width="{Binding SongTotalWidth, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}" />
+
+                    <!-- SUBDIVISION LINES (drawn behind notes and lanes) -->
+                    <ItemsControl ItemsSource="{Binding Subdivisions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <!-- Canvas full width so subdivision X positions are absolute -->
+                                <Canvas Background="Transparent"
+                                        Width="{Binding SongTotalWidth, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
+                                        Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Rectangle Width="1"
+Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType={x:Type local:NoteHighwayControl}}}"
+ Fill="LightBlue"
+ Opacity="0.6"
+ IsHitTestVisible="False" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                <Setter Property="Canvas.Top" Value="0" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
 
                 </Grid>
             </ScrollViewer>

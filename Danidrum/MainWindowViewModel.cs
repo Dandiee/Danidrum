@@ -32,6 +32,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private IReadOnlyCollection<NoteLaneViewModel> _noteLanes = new List<NoteLaneViewModel>();
     [ObservableProperty] private IReadOnlyCollection<BarViewModel> _bars = new List<BarViewModel>();
+    [ObservableProperty] private IReadOnlyCollection<SubdivisionViewModel> _subdivisions = new List<SubdivisionViewModel>();
 
     private DryWetMidiFile _dryWetMidiFile;
     private bool _isUserSeeking = false;
@@ -204,7 +205,7 @@ public partial class MainWindowViewModel : ObservableObject
         TotalSongDurationMs = duration.TotalMilliseconds;
 
         // unified conversion
-        double pxPerMs = PixelsPerSecond / 1000.0;
+        double pxPerMs = PixelsPerSecond /1000.0;
         TotalSongWidth = TotalSongDurationMs * pxPerMs;
 
         // Bars use same pxPerMs
@@ -215,6 +216,33 @@ public partial class MainWindowViewModel : ObservableObject
             MeasureIndex = bar.MeasureIndex,
             DisplayText = $"{bar.MeasureIndex} ({bar.TimeSignature.Numerator}/{bar.TimeSignature.Denominator})"
         }).ToList();
+
+        // Subdivisions (beat lines) across all bars
+        var subs = new List<SubdivisionViewModel>();
+        foreach (var bar in bars)
+        {
+            int beats = bar.TimeSignature.Numerator;
+            if (beats <=1) continue;
+
+            long barLengthTicks = bar.EndTick - bar.StartTick;
+            // divide evenly in ticks to avoid ms rounding issues
+            for (int b =1; b < beats; b++)
+            {
+                long subTick = bar.StartTick + (barLengthTicks * b) / beats;
+                // convert tick -> ms using tempoMap to be accurate
+                var subMetric = TimeConverter.ConvertTo<MetricTimeSpan>(subTick, tempoMap);
+                double subMs = subMetric.TotalMicroseconds /1000.0;
+                double subX = subMs * pxPerMs;
+                subs.Add(new SubdivisionViewModel
+                {
+                    X = subX,
+                    MeasureIndex = bar.MeasureIndex,
+                    BeatIndex = b
+                });
+            }
+        }
+
+        Subdivisions = subs;
 
         SelectedTrack = Tracks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Tracks.FirstOrDefault();
 
