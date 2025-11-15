@@ -190,6 +190,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         _dryWetMidiFile = await Task.Run(() => DryWetMidiFile.Read(filePath));
 
+        var ctx = new SongContext(_dryWetMidiFile);
+
         Tracks = _trackListService.GetAllTrackInfo(_dryWetMidiFile);
         SubscribeToMuteChanges();
 

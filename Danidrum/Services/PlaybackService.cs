@@ -42,21 +42,7 @@ public class PlaybackService
         _tempoMap = dryWetMidiFile.GetTempoMap();
         _totalSongDurationInMs = (long)((MetricTimeSpan)_dryWetMidiFile.GetDuration(TimeSpanType.Metric)).TotalMilliseconds;
 
-
-        //var mutedChannels = tracks
-        //    .Where(t => t.IsMuted)
-        //    .Select(t => t.ChannelId)
-        //    .ToHashSet();
-
         _backingTrackEvents = _dryWetMidiFile.GetTimedEvents()
-            //.Where(e =>
-            //{
-            //    if (e.Event is ChannelEvent channelEvent)
-            //    {
-            //        return !mutedChannels.Contains(channelEvent.Channel);
-            //    }
-            //    return true;
-            //})
             .OrderBy(e => e.Time)
             .ToList();
 
@@ -193,10 +179,8 @@ public class PlaybackService
                 var timedEvent = _backingTrackEvents[_nextEventIndex];
                
                 var eventTimeMs = timedEvent.TimeAs<MetricTimeSpan>(_tempoMap).TotalMilliseconds;
-
                 if (eventTimeMs <= currentTimeMs)
                 {
-
                     if (timedEvent.Event is ChannelEvent channelEvent)
                     {
                         if (_mutedChannels == null || !_mutedChannels.Contains(channelEvent.Channel))
