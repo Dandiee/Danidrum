@@ -44,7 +44,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private double _speed = 1;
     [ObservableProperty] private double _bpm = 0;
 
-    private OutputDevice _outputDevice;
+    private IOutputDevice _outputDevice;
     private InputDevice _inputDevice;
     [ObservableProperty] private IReadOnlyList<ChunkContext> _chunks;
 
@@ -232,7 +232,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (value != null)
         {
-            _outputDevice = OutputDevice.GetByName(value);
+            //_outputDevice = OutputDevice.GetByName(value);
+            _outputDevice = new AsioSineSynthOutputDevice("TD-07");
             if (_playback != null)
             {
                 _playback.OutputDevice = _outputDevice;
