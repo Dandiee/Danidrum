@@ -11,19 +11,27 @@
         Style="{StaticResource MaterialDesignWindow}"        
         xmlns:services="clr-namespace:Danidrum.Services" 
         xmlns:userControls="clr-namespace:Danidrum.UserControls"
-        Title="MainWindow" Height="800" Width="1800"
+        Title="Danidrum" Height="800" Width="1800"
         Background="{StaticResource MaterialDesignPaper}"
         materialDesign:ThemeAssist.Theme="Dark"
+        AllowDrop="True"
         TextElement.Foreground="{StaticResource MaterialDesignBody}">
-
 
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" />
         </b:EventTrigger>
 
+        <b:EventTrigger EventName="Drop">
+            <b:InvokeCommandAction Command="{Binding DropCommand}" PassEventArgsToCommand="True" />
+        </b:EventTrigger>
+
         <b:KeyTrigger Key="Space" FiredOn="KeyUp" ActiveOnFocus="True">
             <b:InvokeCommandAction Command="{Binding TogglePlayPauseCommand}" />
+        </b:KeyTrigger>
+
+        <b:KeyTrigger Key="O" Modifiers="Control" FiredOn="KeyUp" ActiveOnFocus="False">
+            <b:InvokeCommandAction Command="{Binding OpenCommand}" />
         </b:KeyTrigger>
     </b:Interaction.Triggers>
 
@@ -36,84 +44,153 @@
         </Grid.ColumnDefinitions>
 
 
-        <ListBox Grid.Column="0"
-                 ItemsSource="{Binding Chunks}"
-                 SelectedItem="{Binding SelectedChunk}"
-                 HorizontalContentAlignment="Stretch"
-                 Style="{StaticResource MaterialDesignNavigationListBox}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <ListBox.ItemTemplate>
-                <DataTemplate DataType="{x:Type services:ChunkContext}">
-                    <Grid Margin="5, 8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+            <ListBox  Grid.Row="1"
+                     ItemsSource="{Binding Chunks}"
+                     SelectedItem="{Binding SelectedChunk}"
+                     HorizontalContentAlignment="Stretch"
+                     Style="{StaticResource MaterialDesignNavigationListBox}">
 
-                        <materialDesign:PackIcon Kind="MusicNote"
-                                     Grid.Column="0"
-                                     Margin="0,0,15,0"
-                                     VerticalAlignment="Center"
-                                     Foreground="{DynamicResource MaterialDesign.Brush.OnSurfaceVariant}"/>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type services:ChunkContext}">
+                        <Grid Margin="5, 8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Name}"
-                                       FontWeight="Bold"
-                                       TextTrimming="CharacterEllipsis">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignBody1TextBlock}">
-                                        <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.OnSurface}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsLikelyDrumTrack}" Value="True">
-                                                <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.Secondary.Light}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <materialDesign:PackIcon Kind="MusicNote"
+                                         Grid.Column="0"
+                                         Margin="0,0,15,0"
+                                         VerticalAlignment="Center"
+                                         Foreground="{DynamicResource MaterialDesign.Brush.OnSurfaceVariant}"/>
 
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding ChannelId, StringFormat={}CH{0}}"
-                                           Style="{StaticResource MaterialDesignBody2TextBlock}"
-                                           Foreground="{DynamicResource MaterialDesign.Brush.Primary.Light}"
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}"
                                            FontWeight="Bold"
-                                           TextTrimming="CharacterEllipsis"/>
+                                           TextTrimming="CharacterEllipsis">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignBody1TextBlock}">
+                                            <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.OnSurface}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLikelyDrumTrack}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.Secondary.Light}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
 
-                                <TextBlock Text="-" Margin="5 0"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding ChannelId, StringFormat={}CH{0}}"
+                                               Style="{StaticResource MaterialDesignBody2TextBlock}"
+                                               Foreground="{DynamicResource MaterialDesign.Brush.Primary.Light}"
+                                               FontWeight="Bold"
+                                               TextTrimming="CharacterEllipsis"/>
 
-                                <TextBlock Text="{Binding InstrumentName}"
-                                           Style="{StaticResource MaterialDesignBody2TextBlock}"
-                                           Foreground="{DynamicResource MaterialDesign.Brush.OnSurfaceVariant}"
-                                           TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="-" Margin="5 0"/>
 
+                                    <TextBlock Text="{Binding InstrumentName}"
+                                               Style="{StaticResource MaterialDesignBody2TextBlock}"
+                                               Foreground="{DynamicResource MaterialDesign.Brush.OnSurfaceVariant}"
+                                               TextTrimming="CharacterEllipsis"/>
+
+
+                                </StackPanel>
 
                             </StackPanel>
 
-                        </StackPanel>
+                            <ToggleButton Grid.Column="2"
+                                          Style="{StaticResource MaterialDesignActionToggleButton}"
+                                          IsChecked="{Binding IsMuted}"
+                                          Command="{Binding DataContext.MuteStateChangedCommand, RelativeSource={RelativeSource AncestorType=local:MainWindow}}"
+                                          CommandParameter="{Binding}"
+                                          Margin="8,0,0,0"
+                                          VerticalAlignment="Center">
 
-                        <ToggleButton Grid.Column="2"
-                                      Style="{StaticResource MaterialDesignActionToggleButton}"
-                                      IsChecked="{Binding IsMuted}"
-                                      Command="{Binding DataContext.MuteStateChangedCommand, RelativeSource={RelativeSource AncestorType=local:MainWindow}}"
-                                      CommandParameter="{Binding}"
-                                      Margin="8,0,0,0"
-                                      VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="VolumeHigh" />
 
-                            <materialDesign:PackIcon Kind="VolumeHigh" />
+                                <materialDesign:ToggleButtonAssist.OnContent>
+                                    <materialDesign:PackIcon Kind="VolumeOff" />
+                                </materialDesign:ToggleButtonAssist.OnContent>
 
-                            <materialDesign:ToggleButtonAssist.OnContent>
-                                <materialDesign:PackIcon Kind="VolumeOff" />
-                            </materialDesign:ToggleButtonAssist.OnContent>
+                            </ToggleButton>
 
-                        </ToggleButton>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
 
-                    </Grid>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
+            </ListBox>
 
-        </ListBox>
+            <StackPanel Grid.Row="0" Margin="20">
 
+               
+
+
+                <DockPanel Margin="0 0 0 20">
+                    <materialDesign:PackIcon Kind="Metronome" Width="22" Height="22" VerticalAlignment="Center" DockPanel.Dock="Left" />
+                    
+                    <materialDesign:Chip Background="{DynamicResource MaterialDesign.Brush.Primary}" DockPanel.Dock="Right">
+                        <TextBlock Text="{Binding Bpm, StringFormat={}{0:F0} BPM}" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                    </materialDesign:Chip>
+
+                    <Slider Value="{Binding Speed}" Minimum="0.01" Maximum="2" VerticalAlignment="Center" Margin="10 0 0 0"/>
+                </DockPanel>
+
+
+                <DockPanel Margin="0 0 0 20">
+                    <materialDesign:PackIcon Kind="ArrowExpandHorizontal" Width="22" Height="22" VerticalAlignment="Center" DockPanel.Dock="Left" />
+
+                    <Slider HorizontalAlignment="Stretch" Value="{Binding PixelPerMs}" Margin="10 0 0 0"
+                            Minimum="0.05" Maximum="1" VerticalAlignment="Center" />
+                </DockPanel>
+
+                <DockPanel Margin="0 0 0 20">
+                    <materialDesign:PackIcon Kind="TimerPlay" Width="22" Height="22" VerticalAlignment="Center" DockPanel.Dock="Left" />
+                    <Slider Value="{Binding VisualLatencyInMs}" Minimum="0" Maximum="500"  Margin="10 0 0 0"/>
+                </DockPanel>
+
+                <DockPanel Margin="0 0 0 20">
+                    <materialDesign:PackIcon Kind="microphone" Width="22" Height="22" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                    <Button Style="{StaticResource MaterialDesignFloatingActionLightButton}" DockPanel.Dock="Right"
+                            Height="20" Width="20" Margin="5 0 0 0"
+                            Command="{Binding RefreshDevicesCommand}"
+                            HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="Refresh" />
+                    </Button>
+
+                    <ComboBox ItemsSource="{Binding InputDevices}" 
+                              materialDesign:HintAssist.Hint="No Input device"
+                              SelectedItem="{Binding SelectedInputDevice}" Margin="10 0"/>
+                </DockPanel>
+
+                <DockPanel Margin="0 0 0 20">
+                    <materialDesign:PackIcon Kind="VolumeHigh" Width="22" Height="22" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+                    <Button Style="{StaticResource MaterialDesignFloatingActionLightButton}" DockPanel.Dock="Right"
+                            Command="{Binding RefreshDevicesCommand}"
+                            Height="20" Width="20" Margin="5 0 0 0"
+                            HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="Refresh" />
+                    </Button>
+
+                    <ComboBox ItemsSource="{Binding OutputDevices}"
+                              materialDesign:HintAssist.Hint="Output Device"
+                              SelectedItem="{Binding SelectedOutputDevice}" Margin="10 0"/>
+                </DockPanel>
+
+                  
+                
+
+
+            </StackPanel>
+
+        </Grid>
         <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
 
         <Grid Grid.Column="2">
@@ -149,64 +226,29 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal" Margin="10">
+                <DockPanel Margin="10">
+
+
+                    <ToggleButton IsChecked="{Binding IsReduced}" />
+                    <TextBlock Text="Reduce track" VerticalAlignment="Center" Margin="10 0 0 0"/>
+                        
+                    
+
 
                     <ToggleButton Style="{StaticResource MaterialDesignActionToggleButton}"
                                   IsChecked="{Binding IsPlaying}"
-                                  Margin="8,0,0,0"
+                                  HorizontalAlignment="Right"
+                                  DockPanel.Dock="Right"
                                   VerticalAlignment="Center">
-
                         <materialDesign:PackIcon Kind="Play" />
-
                         <materialDesign:ToggleButtonAssist.OnContent>
                             <materialDesign:PackIcon Kind="Pause" />
                         </materialDesign:ToggleButtonAssist.OnContent>
-
                     </ToggleButton>
 
-                    <TextBlock VerticalAlignment="Center" Text="Reduce" Margin="20 0 0 0"/>
-                    <ToggleButton IsChecked="{Binding IsReduced}" Margin="20 0 0 0"/>
+                  
+                </DockPanel>
 
-                    <materialDesign:PackIcon Kind="microphone" Width="22" Height="22" VerticalAlignment="Center" Margin="40 0 0 0" />
-                    <ComboBox ItemsSource="{Binding InputDevices}" SelectedItem="{Binding SelectedInputDevice}" 
-                              Margin="10 0 0 0"/>
-
-
-                    <materialDesign:PackIcon Kind="VolumeHigh" Width="22" Height="22" VerticalAlignment="Center" Margin="40 0 0 0" />
-                    <ComboBox ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding SelectedOutputDevice}"
-                              Margin="10 0 0 0"/>
-
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Column="1">
-
-
-                    <materialDesign:Chip Background="{DynamicResource MaterialDesign.Brush.Primary}" Margin="0 0 30 0">
-                        <materialDesign:PackIcon Kind="MagnifyMinus" Width="22" Height="22" VerticalAlignment="Center" />
-                    </materialDesign:Chip>
-
-
-                    <materialDesign:PackIcon Kind="MagnifyMinusOutline" Width="22" Height="22" VerticalAlignment="Center" />
-                    <Slider Width="200" Value="{Binding PixelPerMs}" Minimum="0.05" Maximum="1" VerticalAlignment="Center"
-                            Margin="10 0 0 0"/>
-                    <materialDesign:PackIcon Kind="MagnifyPlusOutline" Width="22" Height="22" VerticalAlignment="Center" />
-
-
-                    <materialDesign:Chip Background="{DynamicResource MaterialDesign.Brush.Primary}" Margin="0 0 30 0">
-                        <materialDesign:PackIcon Kind="MagnifyPlus" Width="22" Height="22" VerticalAlignment="Center" />
-                    </materialDesign:Chip>
-
-
-                    <Slider Width="200" Value="{Binding VisualLatencyInMs}" Minimum="0" Maximum="500" VerticalAlignment="Center"/>
-                    <materialDesign:Chip Background="{DynamicResource MaterialDesign.Brush.Primary}" Margin="0 0 30 0">
-                        <materialDesign:PackIcon Kind="TimerCogOutline" Width="22" Height="22" VerticalAlignment="Center" />
-                    </materialDesign:Chip>
-
-                    <Slider Value="{Binding Speed}" Minimum="0.01" Maximum="2" Width="200" VerticalAlignment="Center"/>
-                    <materialDesign:Chip Background="{DynamicResource MaterialDesign.Brush.Primary}" Margin="0 0 30 0">
-                        <TextBlock Text="{Binding Bpm, StringFormat={}{0:F0} BPM}"/>
-                    </materialDesign:Chip>
-                </StackPanel>
             </Grid>
 
         </Grid>

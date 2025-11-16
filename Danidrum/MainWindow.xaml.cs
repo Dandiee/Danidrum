@@ -1,17 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System.Windows;
 
 namespace Danidrum;
 
-public partial class MainWindow : Window
+public partial class MainWindow
 {
     public MainWindow()
     {
         InitializeComponent();
 
         DataContext = App.Services.GetRequiredService<MainWindowViewModel>();
-
-
-            
     }
 }

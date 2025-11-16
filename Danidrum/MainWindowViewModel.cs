@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,6 +9,7 @@ using Melanchall.DryWetMidi.Multimedia;
 using System.Windows.Media;
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
+using Microsoft.Win32;
 
 namespace Danidrum;
 
@@ -48,6 +50,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     private HashSet<int> _mutedChannels = new();
 
+    public MainWindowViewModel()
+    {
+        RefreshDevices();
+    }
+
     partial void OnSpeedChanged(double value)
     {
         _playback.Speed = value;
@@ -56,11 +63,19 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnIsPlayingChanged(bool value)
     {
-        if (value) _playback.Start();
+        if (value)
+        {
+            foreach (var lane in Song.Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
+            {
+                lane.StateChanged?.Invoke(this, new StateChangeEventArgs(true));
+            }
+
+            _playback.Start();
+        }
         else _playback.Stop();
     }
 
-    partial void OnIsReducedChanged(bool value) => LoadSong();
+    partial void OnIsReducedChanged(bool value) => LoadSong(Song.FilePath);
 
     partial void OnRangeStartMsChanged(double value)
     {
@@ -78,10 +93,10 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void LoadSong()
+    private void LoadSong(string path)
     {
         IsPlaying = false;
-        Song = new SongContext("test.mid", IsReduced);
+        Song = new SongContext(path, IsReduced);
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
         MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
@@ -102,46 +117,19 @@ public partial class MainWindowViewModel : ObservableObject
         _playback.NoteCallback = ChannelMuteFilter;
         _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
         _playback.Loop = true;
-        
     }
 
     [RelayCommand]
     private async Task Loaded()
     {
-        InputDevices = InputDevice.GetAll().Select(e => e.Name).ToList();
-        OutputDevices = OutputDevice.GetAll().Select(e => e.Name).ToList();
-
-        SelectedInputDevice = InputDevices.FirstOrDefault();
-        SelectedOutputDevice = OutputDevices.FirstOrDefault();
-
-        if (SelectedInputDevice != null)
-        {
-            _inputDevice = InputDevice.GetByName(SelectedInputDevice);
-            _inputDevice.EventReceived += OnMidiEvent;
-            _inputDevice.StartEventsListening();
-        }
-
-        _outputDevice = OutputDevice.GetByName(SelectedOutputDevice);
-
-        if (SelectedOutputDevice == null)
-        {
-            MessageBox.Show("No output device :(");
-            Application.Current.Shutdown();
-        }
-
-        LoadSong();
+        RefreshDevices();
+        LoadSong("test.mid");
     }
 
     partial void OnIsUserSeekingChanged(bool value)
     {
-        if (IsPlaying) throw new Exception("fuck off");
-
         if (!value)
         {
-            foreach (var lane in Song.Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
-            {
-                lane.StateChanged?.Invoke(this, EventArgs.Empty);
-            }
             _playback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentTimeMs)));
         }
     }
@@ -161,7 +149,87 @@ public partial class MainWindowViewModel : ObservableObject
 
     [RelayCommand]
     private void TogglePlayPause() => IsPlaying = !IsPlaying;
-    
+
+    [RelayCommand]
+    private void Drop(DragEventArgs args)
+    {
+        if (args.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            var files = (string[])args.Data.GetData(DataFormats.FileDrop);
+            if (files != null)
+            {
+                var file = files.Select(e => new FileInfo(e)).FirstOrDefault(e => e.Exists && e.Extension.Equals(".mid"));
+                if (file != null)
+                {
+                    LoadSong(file.FullName);
+                }
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void Open()
+    {
+        var openFileDialog = new OpenFileDialog
+        {
+            Title = "Select a MIDI File",
+            Filter = "MIDI Files (*.mid, *.midi)|*.mid;*.midi|All Files (*.*)|*.*",
+            FilterIndex = 1,
+            Multiselect = false
+        };
+
+        if (openFileDialog.ShowDialog() == true)
+        {
+            LoadSong(openFileDialog.FileName);
+        }
+    }
+
+    [RelayCommand]
+    private void RefreshDevices()
+    {
+        InputDevices = InputDevice.GetAll().Select(e => e.Name).ToList();
+        OutputDevices = OutputDevice.GetAll().Select(e => e.Name).ToList();
+
+        SelectedInputDevice = InputDevices.FirstOrDefault();
+        SelectedOutputDevice = OutputDevices.FirstOrDefault();
+    }
+
+    partial void OnSelectedInputDeviceChanged(string value)
+    {
+        if (_inputDevice != null)
+        {
+            _inputDevice.EventReceived -= OnMidiEvent;
+            _inputDevice.Dispose();
+            _inputDevice = null;
+        }
+
+        if (value != null)
+        {
+            _inputDevice = InputDevice.GetByName(value);
+            _inputDevice.EventReceived += OnMidiEvent;
+            _inputDevice.StartEventsListening();
+        }
+    }
+
+    partial void OnSelectedOutputDeviceChanged(string value)
+    {
+        IsPlaying = false;
+
+        if (_outputDevice != null)
+        {
+            _outputDevice.Dispose();
+            _outputDevice = null;
+        }
+
+        if (value != null)
+        {
+            _outputDevice = OutputDevice.GetByName(value);
+            if (_playback != null)
+            {
+                _playback.OutputDevice = _outputDevice;
+            }
+        }
+    }
 
     private void PlaybackOnNotesPlaybackFinished(object? sender, NotesEventArgs e)
     {
@@ -172,7 +240,7 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 if (SelectedChunk.ChannelId == ctx[0].Lane.Chunk.ChannelId)
                 {
-                    ctx[0].Lane.StateChanged?.Invoke(this, EventArgs.Empty);
+                    ctx[0].Lane.StateChanged?.Invoke(this, new StateChangeEventArgs(false));
                 }
             }
         }

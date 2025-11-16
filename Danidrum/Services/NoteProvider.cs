@@ -31,6 +31,7 @@ public struct NoteKey : IEquatable<NoteKey>
 public class SongContext
 {
     public DryWetMidiFile Midi { get; }
+    public string FilePath { get; }
     public TempoMap TempoMap { get; }
     public IReadOnlyList<ChannelContext> Channels { get; }
     public IReadOnlyList<MeasureContext> Measures { get; }
@@ -40,6 +41,7 @@ public class SongContext
 
     public SongContext(string midiFilePath, bool useReduction)
     {
+        FilePath = midiFilePath;
         Midi = DryWetMidiFile.Read(midiFilePath);
         IsReduced = useReduction;
         TempoMap = Midi.GetTempoMap();
@@ -200,6 +202,10 @@ public partial class ChunkContext : ObservableObject
 }
 
 
+public class StateChangeEventArgs(bool cleanState) : EventArgs
+{
+    public bool CleanState { get; } = cleanState;
+}
 
 public class LaneContext
 {
@@ -210,7 +216,7 @@ public class LaneContext
     public int LaneId { get; }
     public string Name { get; }
     public IReadOnlyList<NoteContext> Notes { get; }
-    public EventHandler StateChanged { get; set; }
+    public EventHandler<StateChangeEventArgs> StateChanged { get; set; }
     public EventHandler<InputArg> InputReceived { get; set; }
     public KitArticulation KitArticulation { get; set; }
 

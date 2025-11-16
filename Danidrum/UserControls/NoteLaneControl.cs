@@ -29,16 +29,19 @@ public class NoteLaneControl : FrameworkElement
         SnapsToDevicePixels = true;
     }
 
+    private StateChangeEventArgs _lastStateChangeEventArgs;
+
     public NoteLaneControl(LaneContext lane, NoteHighwayControl owner)
      : this()
     {
         _lane = lane;
         _owner = owner;
 
-        lane.StateChanged += (_, _) =>
+        lane.StateChanged += (_, args) =>
         {
             try
             {
+                _lastStateChangeEventArgs = args;
                 Dispatcher.Invoke(InvalidateVisual);
             }
             catch { }
@@ -65,6 +68,9 @@ public class NoteLaneControl : FrameworkElement
     {
         base.OnRender(dc);
 
+        var isCleaning = _lastStateChangeEventArgs?.CleanState ?? false;
+        _lastStateChangeEventArgs = null;
+
         var lane = _lane ?? DataContext as LaneContext;
         if (lane == null) return;
 
@@ -79,17 +85,14 @@ public class NoteLaneControl : FrameworkElement
 
         if (_lane != null)
         {
-            dc.DrawLine(new Pen(SubdivisionBrush, 0.8), new Point(0, 0), new Point(ActualWidth, 0));
+            dc.DrawLine(new Pen(SubdivisionBrush, 0.5), new Point(0, 0), new Point(ActualWidth, 0));
         }
 
         var pixelPerMs = _owner?.PixelPerMs ?? ActualWidth / lane.Chunk.Channel.Song.LengthMs;
         double cornerRadius = _lane == null ? 1 : 4;
-        const double normaNoteDuration = 100;
 
         foreach (var note in lane.Notes)
         {
-            var noteSize = 50;
-
             dc.DrawRoundedRectangle(
                 brush: _lane == null
                     ? NoteBrush
