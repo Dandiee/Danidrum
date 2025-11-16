@@ -26,32 +26,47 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <Border BorderThickness="0 0 1 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
+                        Height="{Binding ActualHeight, ElementName=TimeLineContainer}"
+                        IsHitTestVisible="False"
+                        Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}" Width="{Binding RangeStart, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" 
+                        Opacity="0.5"
+                        HorizontalAlignment="Left"/>
+
+
+                <Border BorderThickness="0 0 1 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
+                        Height="{Binding ActualHeight, ElementName=TimeLineContainer}"
+                        IsHitTestVisible="False"
+                        Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}" Width="{Binding RangeEnd, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" 
+                        Opacity="0.5"
+                        HorizontalAlignment="Right"/>
+
                 <Canvas x:Name="PositionCanvas">
 
-                    <Thumb x:Name="PositionThumb"
+                    <Thumb x:Name="StartRangeThumb"
                            HorizontalAlignment="Left"
-                           Width="4" 
-                           Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}"
-                           DragDelta="PositionThumb_DragDelta"
-                           DragStarted="PositionThumb_OnDragStarted"
-                           DragCompleted="PositionThumb_OnDragCompleted"
-                           Margin="-2 0 0 0"
-                           Canvas.Left="{Binding CurrentPosition, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Mode=TwoWay}">
-                        <Thumb.Style>
-                            <Style TargetType="Thumb">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Thumb">
-                                            <Border Background="{TemplateBinding Background}" 
-                                                    Width="{TemplateBinding Width}" 
-                                                    Height="{Binding ElementName=PositionCanvas, Path=ActualHeight}"/>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Thumb.Style>
-                    </Thumb>
+                           Width="10" 
+                           Background="{DynamicResource MaterialDesign.Brush.Primary.Light}"
+                           DragDelta="OnRangeDragDelta"
+                           Height="{Binding Path=ActualHeight, ElementName=TimeLineContainer}"
+                           Margin="-5 0 0 0"
+                           Canvas.Left="{Binding RangeStart, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Mode=TwoWay}"/>
+
+
+                    <Thumb x:Name="EndRangeThumb"
+                           HorizontalAlignment="Left"
+                           Width="10" 
+                           Background="{DynamicResource MaterialDesign.Brush.Primary.Light}"
+                           DragDelta="OnRangeDragDelta"
+                           Height="{Binding Path=ActualHeight, ElementName=TimeLineContainer}"
+                           Margin="-5 0 0 0"
+                           Canvas.Right="{Binding RangeEnd, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Mode=TwoWay}"/>
+
+                   
+
                 </Canvas>
+
+              
 
                 <Border BorderThickness="0 0 1 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
                         IsHitTestVisible="False"

@@ -31,6 +31,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isUserSeeking = false;
 
     [ObservableProperty] private double _currentTimeMs;
+    [ObservableProperty] private double _rangeStartMs;
+    [ObservableProperty] private double _rangeEndMs;
 
 
     [ObservableProperty] private SongContext _song;
@@ -59,6 +61,16 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     partial void OnIsReducedChanged(bool value) => LoadSong();
+
+    partial void OnRangeStartMsChanged(double value)
+    {
+
+    }
+
+    partial void OnRangeEndMsChanged(double value)
+    {
+
+    }
 
     private void LoadSong()
     {
