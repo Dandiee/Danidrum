@@ -1,5 +1,6 @@
 ﻿using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Multimedia;
+using MeltySynth;
 using NAudio.Dsp;
 using NAudio.Wave;
 using NAudio.Wave.Asio;
@@ -8,81 +9,33 @@ using System;
 
 namespace Danidrum;
 
-
-public class AsioPolyphonicSynthDevice : IOutputDevice
+public class AsioSoundFontSynthDevice : IOutputDevice
 {
     private readonly AsioOut _asioOut;
-    private readonly MixingSampleProvider _mixer;
-    private readonly List<SynthVoice> _voices;
-    private readonly WaveFormat _waveFormat;
+    private readonly MeltySynthSampleProvider _synthProvider; // Our new synth
 
-    // --- ADSR Parameters ---
-    // You can expose these or hard-code them
-    public float AttackSeconds { get; set; } = 0.01f;
-    public float DecaySeconds { get; set; } = 0.1f;
-    public float SustainLevel { get; set; } = 0.5f;
-    public float ReleaseSeconds { get; set; } = 0.3f;
-    // -----------------------
-
-    public AsioPolyphonicSynthDevice(string asioDriverName)
+    public AsioSoundFontSynthDevice(string asioDriverName, string soundFontPath)
     {
-        _waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
-        _voices = new List<SynthVoice>();
+        // 1. Create the synth provider
+        _synthProvider = new MeltySynthSampleProvider(soundFontPath, 44100);
 
-        _mixer = new MixingSampleProvider(_waveFormat)
-        {
-            ReadFully = true
-        };
-
+        // 2. Initialize ASIO output and plug the synth into it
         _asioOut = new AsioOut(asioDriverName);
-        _asioOut.Init(_mixer);
+        _asioOut.Init(_synthProvider);
         _asioOut.Play();
     }
 
-    public string Name => "AsioPolyphonicSynthDevice";
+    public string Name => "AsioSoundFontSynthDevice";
 
     public void PrepareForEventsSending() { }
 
+    /// <summary>
+    /// This method just passes the MIDI event directly to the synth.
+    /// No more voice management!
+    /// </summary>
     public void SendEvent(MidiEvent midiEvent)
     {
-        // --- Voice Management: Clean up dead voices ---
-        // This is now done by checking the 'IsDead' property
-        for (int i = _voices.Count - 1; i >= 0; i--)
-        {
-            if (_voices[i].IsDead)
-            {
-                _mixer.RemoveMixerInput(_voices[i]);
-                _voices.RemoveAt(i);
-            }
-        }
-
-        // --- Event Handling ---
-        if (midiEvent is NoteOnEvent noteOn && noteOn.Velocity > 0)
-            //_mixer.RemoveMixerInput(_voices[i]);
-        {
-            // Create a new voice with the specified ADSR parameters
-            var voice = new SynthVoice(
-                noteOn.NoteNumber,
-                noteOn.Velocity,
-                _waveFormat,
-                AttackSeconds,
-                DecaySeconds,
-                SustainLevel,
-                ReleaseSeconds);
-
-            _voices.Add(voice);
-            _mixer.AddMixerInput(voice);
-        }
-        else if (midiEvent is NoteOffEvent noteOff || (midiEvent is NoteOnEvent noteOffAsOn && noteOffAsOn.Velocity == 0))
-        {
-            int noteNumber = (midiEvent as NoteOffEvent)?.NoteNumber ?? (midiEvent as NoteOnEvent).NoteNumber;
-
-            // Find active voices for this note and stop them
-            foreach (var voice in _voices.Where(v => v.NoteNumber == noteNumber && !v.IsDead))
-            {
-                voice.Stop(); // Triggers the Release phase
-            }
-        }
+        _synthProvider.ProcessMidiEvent(midiEvent);
 
         EventSent?.Invoke(this, new MidiEventSentEventArgs(midiEvent));
     }
@@ -93,115 +46,103 @@ public class AsioPolyphonicSynthDevice : IOutputDevice
     {
         _asioOut?.Stop();
         _asioOut?.Dispose();
-        _voices.Clear();
     }
 }
 
-public class SynthVoice : ISampleProvider
+public class MeltySynthSampleProvider : ISampleProvider
 {
-    private readonly SignalGenerator _osc;
-    private readonly EnvelopeGenerator _adsr;
-    private readonly WaveFormat _monoWaveFormat;
-    private float[] _monoBuffer; // Buffer to read mono samples from the oscillator
+    private readonly Synthesizer _synthesizer;
+    public WaveFormat WaveFormat { get; }
 
-    public WaveFormat WaveFormat { get; } // This will be stereo
-    public int NoteNumber { get; }
+    // Internal buffers for MeltySynth to render into (non-interleaved)
+    private float[] _leftBuffer;
+    private float[] _rightBuffer;
+
+    public MeltySynthSampleProvider(string soundFontPath, int sampleRate = 44100)
+    {
+        WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2); // Stereo
+        _synthesizer = new Synthesizer(soundFontPath, sampleRate);
+
+        // Initialize buffers to a reasonable default (e.g., 2048 samples)
+        _leftBuffer = new float[2048];
+        _rightBuffer = new float[2048];
+    }
 
     /// <summary>
-    // This is the correct way to check if the voice is finished.
-    /// The EnvelopeState becomes Idle after the Release phase is complete.
+    /// This is where our custom IOutputDevice will send MIDI events.
     /// </summary>
-    public bool IsDead => _adsr.State == EnvelopeGenerator.EnvelopeState.Idle;
-
-    public SynthVoice(int noteNumber, int velocity, WaveFormat outputFormat,
-                      float attackSeconds, float decaySeconds, float sustainLevel, float releaseSeconds)
+    public void ProcessMidiEvent(MidiEvent midiEvent)
     {
-        NoteNumber = noteNumber;
-        WaveFormat = outputFormat; // Expecting stereo
+        // Translate DryWetMidi event types to MeltySynth's ProcessMidiMessage.
+        // The command byte (e.g., 0x90, 0xB0) is passed as an int.
 
-        // 1. Setup the ADSR Envelope Generator
-        _adsr = new EnvelopeGenerator();
-        _adsr.AttackRate = attackSeconds * WaveFormat.SampleRate;
-        _adsr.DecayRate = decaySeconds * WaveFormat.SampleRate;
-        _adsr.SustainLevel = sustainLevel;
-        _adsr.ReleaseRate = releaseSeconds * WaveFormat.SampleRate;
-
-        // 2. Setup the Oscillator (SignalGenerator)
-        _monoWaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(outputFormat.SampleRate, 1);
-        double frequency = MidiNoteToFrequency(noteNumber);
-        float amplitude = velocity / 127f;
-
-        _osc = new SignalGenerator(_monoWaveFormat.SampleRate, _monoWaveFormat.Channels)
+        if (midiEvent is NoteOnEvent noteOn && noteOn.Velocity > 0)
         {
-            Type = SignalGeneratorType.SawTooth, // Sawtooth is richer
-            Frequency = frequency,
-            Gain = amplitude * 0.5 // Reduce gain to prevent clipping when mixing
-        };
-
-        // 3. Initialize mono buffer
-        _monoBuffer = new float[outputFormat.SampleRate]; // Start with 1 sec buffer
-
-        // Start the envelope (Attack phase)
-        _adsr.Gate(true);
+            // Command 0x90: Note On
+            _synthesizer.ProcessMidiMessage(noteOn.Channel, 0x90, noteOn.NoteNumber, noteOn.Velocity);
+        }
+        else if (midiEvent is NoteOffEvent noteOff)
+        {
+            // Command 0x80: Note Off
+            _synthesizer.ProcessMidiMessage(noteOff.Channel, 0x80, noteOff.NoteNumber, noteOff.Velocity);
+        }
+        else if (midiEvent is NoteOnEvent noteOnAsOff && noteOnAsOff.Velocity == 0)
+        {
+            // Handle NoteOn with Velocity 0 as a NoteOff (Standard MIDI practice)
+            // Command 0x80: Note Off
+            _synthesizer.ProcessMidiMessage(noteOnAsOff.Channel, 0x80, noteOnAsOff.NoteNumber, 0);
+        }
+        else if (midiEvent is ControlChangeEvent controlChange)
+        {
+            // Command 0xB0: Control Change
+            _synthesizer.ProcessMidiMessage(controlChange.Channel, 0xB0, (int)controlChange.ControlNumber, controlChange.ControlValue);
+        }
+        else if (midiEvent is PitchBendEvent pitchBend)
+        {
+            // Command 0xE0: Pitch Bend
+            int lsb = pitchBend.PitchValue & 0x7F;
+            int msb = (pitchBend.PitchValue >> 7) & 0x7F;
+            _synthesizer.ProcessMidiMessage(pitchBend.Channel, 0xE0, lsb, msb);
+        }
+        else if (midiEvent is ProgramChangeEvent programChange)
+        {
+            // Command 0xC0: Program Change
+            _synthesizer.ProcessMidiMessage(programChange.Channel, 0xC0, programChange.ProgramNumber, 0);
+        }
     }
 
     /// <summary>
-    /// Triggers the Release phase of the envelope.
+    /// NAudio's AsioOut will call this method to get the audio samples.
     /// </summary>
-    public void Stop()
-    {
-        _adsr.Gate(false);
-    }
-
     public int Read(float[] buffer, int offset, int count)
     {
-        // If the envelope is idle, this voice is dead, return 0.
-        if (IsDead)
+        // 'count' is the total interleaved samples requested (e.g., 1024)
+        // 'samplesToRender' is the number of stereo *pairs* (e.g., 512)
+        int samplesToRender = count / 2;
+
+        // 1. Ensure our internal buffers are large enough
+        if (_leftBuffer.Length < samplesToRender)
         {
-            return 0;
+            _leftBuffer = new float[samplesToRender];
+            _rightBuffer = new float[samplesToRender];
         }
 
-        // 'count' is the total number of float samples requested (L/R)
-        // 'samplesToGenerate' is the number of stereo pairs.
-        int samplesToGenerate = count / WaveFormat.Channels;
+        // 2. Create spans from our internal buffers for MeltySynth
+        var leftSpan = _leftBuffer.AsSpan(0, samplesToRender);
+        var rightSpan = _rightBuffer.AsSpan(0, samplesToRender);
 
-        // Ensure our mono buffer is large enough
-        if (_monoBuffer.Length < samplesToGenerate)
+        // 3. Render audio into our *internal* L/R buffers
+        _synthesizer.Render(leftSpan, rightSpan);
+
+        // 4. Manually interleave the audio from our internal buffers
+        //    into the 'buffer' (at 'offset') that NAudio provided.
+        int outIndex = offset;
+        for (int i = 0; i < samplesToRender; i++)
         {
-            _monoBuffer = new float[samplesToGenerate];
+            buffer[outIndex++] = _leftBuffer[i];
+            buffer[outIndex++] = _rightBuffer[i];
         }
 
-        // 1. Fill the mono buffer from the oscillator
-        int monoSamplesRead = _osc.Read(_monoBuffer, 0, samplesToGenerate);
-
-        // 2. Process the mono buffer: Apply envelope and write to stereo output
-        for (int i = 0; i < monoSamplesRead; i++)
-        {
-            // Get the next envelope value
-            float envelopeValue = _adsr.Process();
-
-            // If envelope is dead, stop processing
-            if (envelopeValue == 0)
-            {
-                // Mark as idle, so IsDead becomes true
-                _adsr.Reset();
-                break;
-            }
-
-            // Apply envelope to the mono sample
-            float sample = _monoBuffer[i] * envelopeValue;
-
-            // Write to stereo output buffer
-            buffer[offset + i * 2] = sample;     // Left
-            buffer[offset + i * 2 + 1] = sample; // Right
-        }
-
-        // Return total number of samples written (L/R)
-        return monoSamplesRead * WaveFormat.Channels;
-    }
-
-    private static double MidiNoteToFrequency(int midiNote)
-    {
-        return 440.0 * Math.Pow(2, (midiNote - 69) / 12.0);
+        return count;
     }
 }
