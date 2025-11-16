@@ -16,6 +16,8 @@ public class AsioSoundFontSynthDevice : IOutputDevice
 
     public AsioSoundFontSynthDevice(string asioDriverName, string soundFontPath)
     {
+        var driver = AsioDriver.GetAsioDriverByName(asioDriverName);
+        //var sampleRate = driver.GetSampleRate();
         // 1. Create the synth provider
         _synthProvider = new MeltySynthSampleProvider(soundFontPath, 44100);
 

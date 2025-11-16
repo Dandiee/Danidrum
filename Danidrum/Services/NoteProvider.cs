@@ -2,11 +2,7 @@
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
-using System.Security.Permissions;
-using System.Threading.Channels;
-using System.Windows.Forms;
 using static Danidrum.MainWindowViewModel;
-using static System.Windows.Forms.AxHost;
 using DryWetMidiFile = Melanchall.DryWetMidi.Core.MidiFile;
 
 namespace Danidrum.Services;
@@ -38,7 +34,8 @@ public class SongContext
     public IReadOnlyList<MeasureContext> Measures { get; }
     public double LengthMs { get; }
     public bool IsReduced { get; }
-    public IReadOnlyDictionary<string, List<NoteContext>> _lookupTable;
+
+    public IReadOnlyDictionary<int, ChannelContext> ChannelsById { get; }
 
     public SongContext(string midiFilePath, bool useReduction)
     {
@@ -53,18 +50,17 @@ public class SongContext
         LengthMs = Midi.GetDuration<MetricTimeSpan>().TotalMilliseconds;
         Measures = Extract(TempoMap, Midi.GetDuration<MidiTimeSpan>()).ToList();
 
-        _lookupTable = Channels
-            .SelectMany(ch => ch.Chunks)
-            .SelectMany(chk => chk.Lanes)
-            .SelectMany(lane => lane.Notes)
-            .GroupBy(grp => GetId(grp.Note))
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.ToList());
+        ChannelsById = Channels.ToDictionary(e => (int)e.ChannelId);
     }
 
-    private string GetId(Note note) => $"{note.Channel}{note.NoteNumber}{note.Time}{note.EndTime}{note.Length}{note.Octave}{note.Velocity}";
-
-    public List<NoteContext> GetNoteContexts(Note note) => _lookupTable.TryGetValue(GetId(note), out var ctx) ? ctx : null;
-
+    public void Clean()
+    {
+        foreach (var lane in Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
+        {
+            lane.StateChanged?.Invoke(this, new StateChangeEventArgs(true));
+        }
+    }
+  
     private static List<MeasureContext> Extract(TempoMap tempoMap, long endTime)
     {
         var tempoChanges = tempoMap.GetTempoChanges().ToList();
@@ -142,11 +138,18 @@ public sealed class ChannelContext
     public SongContext Song { get; }
     public FourBitNumber ChannelId { get; }
 
+    public IReadOnlyDictionary<int, LaneContext> LanesByNote { get; }
+
+
     public ChannelContext(SongContext song, IGrouping<FourBitNumber, TrackChunk> channelGroup, bool useReduction)
     {
         Song = song;
         ChannelId = channelGroup.Key;
         Chunks = channelGroup.Select(chunk => new ChunkContext(this, chunk, useReduction)).ToList();
+        LanesByNote = Chunks
+            .SelectMany(chunk => chunk.Lanes)
+            .GroupBy(e => e.LaneId)
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.First());
     }
 }
 
@@ -184,7 +187,6 @@ public partial class ChunkContext : ObservableObject
             ? (int)Articulation.GetKitArticulation(e.NoteNumber)
             : e.NoteNumber);
 
-        //Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList())).ToList();
         Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList(), useReduction)).OrderBy(lane => lane.LaneId).ToList();
         _lanesByNumbers = Lanes.ToDictionary(e => e.LaneId);
     }
@@ -210,7 +212,7 @@ public class StateChangeEventArgs(bool cleanState) : EventArgs
 
 public class LaneContext
 {
-    public const double PerfectNoteWithMs = 150;
+    public const double PerfectNoteWithMs = 75;
     public const double MinimumNoteMarginMs = 15;
 
     public ChunkContext Chunk { get; }
@@ -220,6 +222,7 @@ public class LaneContext
     public EventHandler<StateChangeEventArgs> StateChanged { get; set; }
     public EventHandler<InputArg> InputReceived { get; set; }
     public KitArticulation KitArticulation { get; set; }
+    public IReadOnlyDictionary<long, List<NoteContext>> NotesByStartTimeTick { get; }
 
     public LaneContext(ChunkContext chunk, int laneId, IReadOnlyList<Note> notes, bool useReduction)
     {
@@ -230,6 +233,10 @@ public class LaneContext
             : Articulation.GetGmNoteName(LaneId, Chunk.ChannelId);
         KitArticulation = (KitArticulation)LaneId;
         Notes = notes.Select(note => new NoteContext(this, note)).ToList();
+
+        NotesByStartTimeTick = Notes
+            .GroupBy(e => e.Time)
+            .ToDictionary(nc => nc.Key, nc => nc.ToList());
 
         SetNoteWidths();
     }

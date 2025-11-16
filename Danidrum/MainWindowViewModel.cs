@@ -66,10 +66,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (value)
         {
-            foreach (var lane in Song.Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
-            {
-                lane.StateChanged?.Invoke(this, new StateChangeEventArgs(true));
-            }
+            Song.Clean();
 
             _playback.Start();
         }
@@ -97,11 +94,12 @@ public partial class MainWindowViewModel : ObservableObject
     private void LoadSong(string path)
     {
         IsPlaying = false;
+        _mutedChannels.Clear();
         Song = new SongContext(path, IsReduced);
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
         MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
-        SelectedChunk = Chunks.SingleOrDefault(e => e.ChannelId == 9 && e.IsLikelyDrumTrack) ??
+        SelectedChunk = Chunks.FirstOrDefault(e => e.ChannelId == 9 && e.IsLikelyDrumTrack) ??
                         Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
         CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
@@ -109,6 +107,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (_playback != null)
         {
             _playback.NotesPlaybackFinished -= PlaybackOnNotesPlaybackFinished;
+            _playback.RepeatStarted -= PlaybackOnRepeatStarted;
             _playback.NoteCallback = null;
             _playback.Dispose();
             _playback = null;
@@ -118,6 +117,12 @@ public partial class MainWindowViewModel : ObservableObject
         _playback.NoteCallback = ChannelMuteFilter;
         _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
         _playback.Loop = true;
+        _playback.RepeatStarted += PlaybackOnRepeatStarted;
+    }
+
+    private void PlaybackOnRepeatStarted(object? sender, EventArgs e)
+    {
+        Song.Clean();
     }
 
     [RelayCommand]
@@ -233,15 +238,19 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (value != null)
         {
-            //_outputDevice = OutputDevice.GetByName(value);
+            
 
-            //_outputDevice = new AsioPolyphonicSynthDevice(AsioDriver.GetAsioDriverNames()[0]);
 
-            string soundFontPath = "GeneralUser-GS.sf2";
-            string asioDriverName = AsioDriver.GetAsioDriverNames()[0];
+            var asioDriver = AsioDriver.GetAsioDriverNames().FirstOrDefault();
+            if (false && !string.IsNullOrEmpty(asioDriver))
+            {
+                _outputDevice = new AsioSoundFontSynthDevice(asioDriver, "GeneralUser-GS.sf2");
+            }
+            else
+            {
+                _outputDevice = OutputDevice.GetByName(value);
+            }
 
-            // Use this as your OutputDevice for DryWetMidi's Playback
-            _outputDevice = new AsioSoundFontSynthDevice(asioDriverName, soundFontPath);
             if (_playback != null)
             {
                 _playback.OutputDevice = _outputDevice;
@@ -253,13 +262,23 @@ public partial class MainWindowViewModel : ObservableObject
     {
         foreach (var note in e.Notes)
         {
-            var ctx = Song.GetNoteContexts(note);
-            if (ctx != null && ctx.Count == 1)
+            if (note.Channel != SelectedChunk.ChannelId) continue;
+
+            if (!Song.ChannelsById.TryGetValue(note.Channel, out var channel)) continue;
+
+            var enu = Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[note.NoteNumber]];
+
+            if (!channel.LanesByNote.TryGetValue((int)enu, out var lane)) continue;
+            if (!lane.NotesByStartTimeTick.TryGetValue(note.Time, out var relatedNotes)) continue;
+
+            foreach (var relatedNote in relatedNotes)
             {
-                if (SelectedChunk.ChannelId == ctx[0].Lane.Chunk.ChannelId)
+                if (relatedNote.State == NoteState.Pending)
                 {
-                    ctx[0].Lane.StateChanged?.Invoke(this, new StateChangeEventArgs(false));
+                    relatedNote.State = NoteState.Missed;
                 }
+
+                lane.StateChanged.Invoke(this, new StateChangeEventArgs(false));
             }
         }
     }
