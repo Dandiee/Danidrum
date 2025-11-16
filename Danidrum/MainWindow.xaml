@@ -125,7 +125,6 @@
 
 
             <userControls:TimeLineUserControl CurrentTimeMs="{Binding CurrentTimeMs, Mode=TwoWay}" 
-                                              Height="100"
                                               VisibleAreaMs="{Binding VisibleAreaMs, Mode=OneWay}"
                                               IsUserSeeking="{Binding IsUserSeeking, Mode=TwoWay}"
                                               IsPlaying="{Binding IsPlaying, Mode=TwoWay}"

@@ -69,8 +69,19 @@ public partial class TimeLineUserControl
         CurrentTimeMs = Math.Clamp(targetTimeMs, 0, Song.LengthMs);
     }
 
-    private void PositionThumb_OnDragStarted(object sender, DragStartedEventArgs e) => IsUserSeeking = true;
-    private void PositionThumb_OnDragCompleted(object sender, DragCompletedEventArgs e) => IsUserSeeking = false;
+        
+    private void PositionThumb_OnDragStarted(object sender, DragStartedEventArgs e)
+    {
+        _originalIsPlaying = IsPlaying;
+        IsPlaying = false;
+        IsUserSeeking = true;
+    }
+
+    private void PositionThumb_OnDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        IsUserSeeking = false;
+        IsPlaying = _originalIsPlaying;
+    }
 
 
     public static readonly DependencyProperty VisibleAreaMsProperty = DependencyProperty.Register(nameof(VisibleAreaMs), typeof(double), typeof(TimeLineUserControl), new PropertyMetadata(0d, OnPropertyChanged));
