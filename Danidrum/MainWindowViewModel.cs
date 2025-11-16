@@ -270,11 +270,7 @@ public partial class MainWindowViewModel : ObservableObject
             var articulation = Articulation.Td07NoteToArticulation[noteOn.NoteNumber];
             var kitArticulation = Articulation.ArticulationToKitArticulation[articulation];
 
-            var laneId = Song.IsReduced
-                ? (int)Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[noteOn.NoteNumber]]
-                : noteOn.NoteNumber;
-
-            if (SelectedChunk.TryGetLane((int)articulation, out var lane))
+            if (SelectedChunk.TryGetLane((int)kitArticulation, out var lane))
             {
                 lane.InputReceived?.Invoke(this, new InputArg(_currentTimeMs));
             }
