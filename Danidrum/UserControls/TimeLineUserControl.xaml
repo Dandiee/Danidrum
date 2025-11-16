@@ -9,6 +9,7 @@
              MouseMove="TimeLineUserControl_OnMouseMove"
              MouseLeftButtonDown="OnSeekStarted"
              MouseLeave="OnSeekCompleted"
+             SizeChanged="OnSizeChanged"
              MouseLeftButtonUp="OnSeekCompleted">
     <Border BorderBrush="{DynamicResource MaterialDesign.Brush.Primary}" BorderThickness="1" 
             Background="{DynamicResource MaterialDesign.Brush.Primary.Dark}">
@@ -66,7 +67,12 @@
 
                 </Canvas>
 
-              
+
+                <Line Stroke="Red" 
+                      X1="{Binding RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Path=CurrentPosition}"
+                      X2="{Binding RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Path=CurrentPosition}"
+                      Y1="0"
+                      Y2="{Binding ElementName=TimeLineContainer, Path=ActualHeight }"/>
 
                 <Border BorderThickness="0 0 1 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
                         IsHitTestVisible="False"

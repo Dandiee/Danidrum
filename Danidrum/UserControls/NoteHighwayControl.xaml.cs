@@ -66,6 +66,22 @@ public partial class NoteHighwayControl
         control.RebuildLanes();
     }
 
+
+    public static readonly DependencyProperty RangeStartMsProperty = DependencyProperty.Register(nameof(RangeStartMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0d, OnChunkPropertyChanged));
+    public double RangeStartMs
+    {
+        get => (double)GetValue(RangeStartMsProperty);
+        set => SetValue(RangeStartMsProperty, value);
+    }
+
+
+    public static readonly DependencyProperty RangeEndMsProperty = DependencyProperty.Register(nameof(RangeEndMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0d, OnChunkPropertyChanged));
+    public double RangeEndMs
+    {
+        get => (double)GetValue(RangeEndMsProperty);
+        set => SetValue(RangeEndMsProperty, value);
+    }
+
     private void NoteCanvasScroller_SizeChanged(object sender, SizeChangedEventArgs e) => RebuildLanes();
 
   
@@ -73,6 +89,7 @@ public partial class NoteHighwayControl
     {
         if (Chunk == null) return;
 
+        LanesGrid.LayoutUpdated += ApplyScrollAnchor;
 
         VisibleAreaMs = NoteCanvasScroller.ActualWidth / PixelPerMs;
 
@@ -107,7 +124,9 @@ public partial class NoteHighwayControl
             };
             Grid.SetRow(laneControl, i + 1);
             LanesGrid.Children.Add(laneControl);
+
             
+
             var titleHost = new ContentControl
             {
                 Content = lane,
@@ -118,6 +137,54 @@ public partial class NoteHighwayControl
             Grid.SetRow(titleHost, i + 1);
             LaneNamesGrid.Children.Add(titleHost);
         }
+
+
+        if (RangeStartMs > 0)
+        {
+            var startRangeOverlay = new Grid
+            {
+                Background = Brushes.Black,
+                Width = RangeStartMs * PixelPerMs,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Opacity = 0.4
+            };
+
+            Grid.SetRowSpan(startRangeOverlay, Chunk.Lanes.Count + 1);
+            LanesGrid.Children.Add(startRangeOverlay);
+        }
+
+        if (RangeEndMs < Song.LengthMs)
+        {
+            var distance = Song.LengthMs - RangeEndMs;
+            var endRangeOverlay = new Grid
+            {
+                Background = Brushes.Black,
+                Width = distance * PixelPerMs,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Opacity = 0.4
+            };
+
+            Grid.SetRowSpan(endRangeOverlay, Chunk.Lanes.Count + 1);
+            LanesGrid.Children.Add(endRangeOverlay);
+        }
+
+        // ApplyScrollAnchor runs after the layout is updated
+
+    }
+
+    private void ApplyScrollAnchor(object? sender, EventArgs e)
+    {
+        LanesGrid.LayoutUpdated -= ApplyScrollAnchor;
+        double newCenterPixel = CurrentTimeMs * PixelPerMs;
+        double newHorizontalOffset = newCenterPixel;
+        NoteCanvasScroller.ScrollToHorizontalOffset(newHorizontalOffset);
+    }
+
+    public static readonly DependencyProperty SongProperty = DependencyProperty.Register(nameof(Song), typeof(SongContext), typeof(NoteHighwayControl), new PropertyMetadata(default(SongContext)));
+    public SongContext Song
+    {
+        get => (SongContext)GetValue(SongProperty);
+        set => SetValue(SongProperty, value);
     }
 
     public static readonly DependencyProperty VisibleAreaMsProperty = DependencyProperty.Register(nameof(VisibleAreaMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0d));

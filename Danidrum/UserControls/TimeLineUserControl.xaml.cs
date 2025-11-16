@@ -36,7 +36,7 @@ public partial class TimeLineUserControl
         var control = d as TimeLineUserControl;
 
         control._pxPerMs = control.TimeLineContainer.ActualWidth / control.Song.LengthMs;
-        control._ticks = control.Song.Measures.Select(e => e.StartTimeMs * control._pxPerMs).ToList();
+        
 
         control.RangeEndMs = control.Song.LengthMs - control.RangeStart / control.TimeLineContainer.ActualWidth * control.RangeStart;
     }
@@ -64,12 +64,17 @@ public partial class TimeLineUserControl
     private static void OnPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var ctrl = d as TimeLineUserControl;
-        var pixelPerMs = ctrl.Song.LengthMs / ctrl.TimeLineContainer.ActualWidth;
-        var visibleArea = ctrl.VisibleAreaMs / pixelPerMs;
+
+        ctrl._pxPerMs = ctrl.Song.LengthMs / ctrl.TimeLineContainer.ActualWidth;
+        var visibleArea = ctrl.VisibleAreaMs / ctrl._pxPerMs;
 
         ctrl.CurrentPosition = ctrl.TimeLineContainer.ActualWidth * (ctrl.CurrentTimeMs / ctrl.Song.LengthMs);
         ctrl.LeftMaskWidth = ctrl.CurrentPosition - visibleArea / 2;
         ctrl.RightMaskWidth = ctrl.TimeLineContainer.ActualWidth - (visibleArea + ctrl.LeftMaskWidth);
+        ctrl.RangeStart = ctrl.RangeStartMs / ctrl._pxPerMs;
+        ctrl.RangeEnd = (ctrl.Song.LengthMs - ctrl.RangeEndMs)/ ctrl._pxPerMs;
+        ctrl._ticks = ctrl.Song.Measures.Select(e => e.StartTimeMs / ctrl._pxPerMs).ToList();
+
     }
 
     private void PositionThumb_DragDelta(object sender, DragDeltaEventArgs e)
@@ -206,4 +211,9 @@ public partial class TimeLineUserControl
     }
 
     private double NearestTick(double value) => _ticks.MinBy(e => Math.Abs(value - e));
+
+    private void OnSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        //RangeStart = _ RangeStartMs
+    }
 }

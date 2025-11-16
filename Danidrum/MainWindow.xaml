@@ -136,6 +136,9 @@
                                              VisibleAreaMs="{Binding VisibleAreaMs, Mode=OneWayToSource}"
                                              PixelPerMs="{Binding PixelPerMs}"
                                              Chunk="{Binding SelectedChunk}"
+                                             Song="{Binding Song}"
+                                             RangeStartMs="{Binding RangeStartMs}"
+                                             RangeEndMs="{Binding RangeEndMs}"
                                              DataContext="{Binding}"
                                              VisualLatencyInMs="{Binding VisualLatencyInMs}"
                                              CurrentTimeMs="{Binding CurrentTimeMs}"/>
