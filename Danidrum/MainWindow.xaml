@@ -128,6 +128,8 @@
                                               VisibleAreaMs="{Binding VisibleAreaMs, Mode=OneWay}"
                                               IsUserSeeking="{Binding IsUserSeeking, Mode=TwoWay}"
                                               IsPlaying="{Binding IsPlaying, Mode=TwoWay}"
+                                              RangeStartMs="{Binding RangeStartMs, Mode=TwoWay}"
+                                              RangeEndMs="{Binding RangeEndMs, Mode=TwoWay}"
                                               Song="{Binding Song}" />
 
             <userControls:NoteHighwayControl Grid.Row="1"
