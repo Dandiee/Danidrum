@@ -6,6 +6,7 @@
              xmlns:local="clr-namespace:Danidrum.UserControls"
              xmlns:services="clr-namespace:Danidrum.Services"
              xmlns:danidrum="clr-namespace:Danidrum"
+             d:DataContext="{d:DesignInstance IsDesignTimeCreatable=False, Type=danidrum:MainWindowViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
@@ -46,6 +47,11 @@
                           HorizontalScrollBarVisibility="Hidden"
                           CanContentScroll="False">
                 <Grid Margin="{Binding ElementName=NoteCanvasScroller, Path=ActualWidth, Converter={StaticResource MidLineConverter}}">
+                    <local:MeasuresControl Song="{Binding Song}"
+                                           MeasureBrush="{DynamicResource MaterialDesign.Brush.Primary}" MeasureThickness="1.5"
+                                           IsMeasureInfoVisible="True"
+                                           SubdivisionBrush="{DynamicResource MaterialDesign.Brush.Primary}" SubdivisionThickness="0.3"
+                                           PixelPerMs="{Binding PixelPerMs}"/>
                     <Grid x:Name="LanesGrid"  />
                 </Grid>
             </ScrollViewer>

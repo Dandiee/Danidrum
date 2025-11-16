@@ -18,15 +18,20 @@ public class NoteLaneControl : FrameworkElement
 
     private List<double> _userInputs = new();
 
+    public NoteLaneControl()
+    {
+        SubdivisionBrush = FindResource("MaterialDesign.Brush.Primary.Light") as SolidColorBrush;
+        NoteBrush = FindResource("MaterialDesign.Brush.Secondary.Light") as SolidColorBrush;
+        NoteBrush.Freeze();
+        //RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
+        SnapsToDevicePixels = true;
+    }
+
     public NoteLaneControl(LaneContext lane, NoteHighwayControl owner)
+     : this()
     {
         _lane = lane;
         _owner = owner;
-
-        SubdivisionBrush = FindResource("MaterialDesign.Brush.Primary.Light") as SolidColorBrush;
-
-        NoteBrush = FindResource("MaterialDesign.Brush.Secondary") as SolidColorBrush;
-        NoteBrush.Freeze();
 
         lane.StateChanged += (_, _) =>
         {
@@ -51,10 +56,6 @@ public class NoteLaneControl : FrameworkElement
             catch { }
             
         };
-
-        //RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
-        
-        SnapsToDevicePixels = true;
     }
 
 
@@ -62,38 +63,55 @@ public class NoteLaneControl : FrameworkElement
     {
         base.OnRender(dc);
 
-        var laneHeight = (Parent as Grid).ActualHeight / _lane.Chunk.Lanes.Count;
+        var lane = _lane ?? DataContext as LaneContext;
+        if (lane == null) return;
+       
+        var laneHeight = _lane == null ? Height : (Parent as Grid).ActualHeight / lane.Chunk.Lanes.Count;
 
-        var height = Math.Min(laneHeight - 10, 60);
+        var margin = _lane != null
+            ? 10
+            : 1;
+
+        var height = Math.Min(laneHeight - (margin * 2), 60);
         var y = (laneHeight - height) / 2;
 
-        dc.DrawLine(new Pen(SubdivisionBrush, 0.8), new Point(0, 0), new Point(ActualWidth, 0));
-
-        foreach (var note in _lane.Notes)
+        if (_lane != null)
         {
-            dc.DrawRoundedRectangle(
-                brush: (DataContext as MainWindowViewModel).CurrentSongPositionMs > note.StartTimeMs ? MissedNoteBrush : NoteBrush, 
-                pen:null,
-                rectangle: new Rect(
-                    x: (note.StartTimeMs - note.DurationMs/2) * _owner.PixelPerMs + 5,
-                    y: y,
-                    width: Math.Max(5, note.DurationMs * _owner.PixelPerMs - 10),
-                    height: height)
-                , 5, 5);
+            dc.DrawLine(new Pen(SubdivisionBrush, 0.8), new Point(0, 0), new Point(ActualWidth, 0));
         }
 
-        foreach (var userInput in _userInputs)
+        var pixelPerMs = _owner?.PixelPerMs ?? ActualWidth / lane.Chunk.Channel.Song.LengthMs;
+
+        foreach (var note in lane.Notes)
         {
             dc.DrawRoundedRectangle(
-                brush: MissedNoteBrush,
-                pen: null,
+                brush: _lane == null
+                    ? NoteBrush
+                    : (DataContext as MainWindowViewModel).CurrentSongPositionMs > note.StartTimeMs ? MissedNoteBrush : NoteBrush, 
+                pen:null,
                 rectangle: new Rect(
-                    x: userInput * _owner.PixelPerMs,
+                    x: (note.StartTimeMs - note.DurationMs/2) * pixelPerMs + margin,
                     y: y,
-                    width: 10,
-                    height: height),
-                radiusX: 5,
-                radiusY: 5);
+                    width: Math.Max(5, note.DurationMs * pixelPerMs - margin*2),
+                    height: height)
+                , margin, margin);
+        }
+
+        if (_lane != null)
+        {
+            foreach (var userInput in _userInputs)
+            {
+                dc.DrawRoundedRectangle(
+                    brush: MissedNoteBrush,
+                    pen: null,
+                    rectangle: new Rect(
+                        x: userInput * _owner.PixelPerMs,
+                        y: y,
+                        width: margin*2,
+                        height: height),
+                    radiusX: margin,
+                    radiusY: margin);
+            }
         }
     }
 

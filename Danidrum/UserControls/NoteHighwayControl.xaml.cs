@@ -85,47 +85,47 @@ public partial class NoteHighwayControl
         LanesGrid.Children.Add(backgroundCanvas);
         Grid.SetRowSpan(backgroundCanvas, Chunk.Lanes.Count);
 
-        foreach (var measure in Chunk.Channel.Song.Measures)
-        {
-            var measurePosition = PixelPerMs * measure.StartTimeMs;
-            var subdivisionOffset = PixelPerMs * (measure.LengthMs / measure.TimeSignature.Denominator);
-            backgroundCanvas.Children.Add(new Line
-            {
-                X1 = measurePosition,
-                X2 = measurePosition,
-                Y1 = 0,
-                Y2 = LanesGrid.ActualHeight,
-                StrokeThickness = 0.5,
+        //foreach (var measure in Chunk.Channel.Song.Measures)
+        //{
+        //    var measurePosition = PixelPerMs * measure.StartTimeMs;
+        //    var subdivisionOffset = PixelPerMs * (measure.LengthMs / measure.TimeSignature.Denominator);
+        //    backgroundCanvas.Children.Add(new Line
+        //    {
+        //        X1 = measurePosition,
+        //        X2 = measurePosition,
+        //        Y1 = 0,
+        //        Y2 = LanesGrid.ActualHeight,
+        //        StrokeThickness = 0.5,
 
-                Stroke = BarBrush
-            });
+        //        Stroke = BarBrush
+        //    });
 
-            var subdivisions = measure.TimeSignature.Denominator;
+        //    var subdivisions = measure.TimeSignature.Denominator;
 
-            for (var i = 1; i < subdivisions; i++)
-            {
-                var subdivisionPosition = measurePosition + subdivisionOffset * i;
-                backgroundCanvas.Children.Add(new Line
-                {
-                    X1 = subdivisionPosition,
-                    X2 = subdivisionPosition,
-                    Y1 = 0,
-                    Y2 = LanesGrid.ActualHeight,
+        //    for (var i = 1; i < subdivisions; i++)
+        //    {
+        //        var subdivisionPosition = measurePosition + subdivisionOffset * i;
+        //        backgroundCanvas.Children.Add(new Line
+        //        {
+        //            X1 = subdivisionPosition,
+        //            X2 = subdivisionPosition,
+        //            Y1 = 0,
+        //            Y2 = LanesGrid.ActualHeight,
 
-                    StrokeThickness = 0.1,
+        //            StrokeThickness = 0.1,
 
-                    Stroke = SubdivisionBrush,
-                });
-            }
+        //            Stroke = SubdivisionBrush,
+        //        });
+        //    }
 
-            var measureInfo = new TextBlock
-            {
-                Text = $"{measure.MeasureIndex}. [{measure.TimeSignature.Numerator}/{measure.TimeSignature.Denominator}]",
-            };
-            backgroundCanvas.Children.Add(measureInfo);
-            Canvas.SetLeft(measureInfo, measurePosition + 10);
-            Canvas.SetTop(measureInfo, 7);
-        }
+        //    var measureInfo = new TextBlock
+        //    {
+        //        Text = $"{measure.MeasureIndex}. [{measure.TimeSignature.Numerator}/{measure.TimeSignature.Denominator}]",
+        //    };
+        //    backgroundCanvas.Children.Add(measureInfo);
+        //    Canvas.SetLeft(measureInfo, measurePosition + 10);
+        //    Canvas.SetTop(measureInfo, 7);
+        //}
 
         LanesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MeasureInfoHeight) });
         LaneNamesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MeasureInfoHeight) });

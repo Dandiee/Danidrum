@@ -129,7 +129,16 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Slider x:Name="PositionSlider"
+                <ItemsControl ItemsSource="{Binding SelectedChunk.Lanes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <userControls:NoteLaneControl Height="10" />
+                        </DataTemplate>
+                        
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!--<Slider x:Name="PositionSlider"
                         Grid.Column="0"
                         Minimum="0"
                         Ticks="{Binding MeasureStartTimesInMs}"
@@ -139,6 +148,7 @@
                         Value="{Binding CurrentSongPositionMs}"
                         SelectionStart="1000"
                         SelectionEnd="5000"
+                        
                         IsSelectionRangeEnabled="True"
                         Foreground="{DynamicResource MaterialDesign.Brush.Foreground}">
 
@@ -152,7 +162,7 @@
                             <b:InvokeCommandAction Command="{Binding StopSeekingCommand}" />
                         </b:EventTrigger>
                     </b:Interaction.Triggers>
-                </Slider>
+                </Slider>-->
 
                 <Button Command="{Binding TogglePlayPauseCommand}" 
                         Margin="20 0 0 0"
@@ -194,9 +204,17 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Column="1">
 
 
+                    <materialDesign:Chip Background="{DynamicResource MaterialDesign.Brush.Primary}" Margin="0 0 30 0">
+                        <materialDesign:PackIcon Kind="MagnifyMinus" Width="22" Height="22" VerticalAlignment="Center" />
+                    </materialDesign:Chip>
 
+
+                    <materialDesign:PackIcon Kind="MagnifyMinusOutline" Width="22" Height="22" VerticalAlignment="Center" />
                     <Slider Width="200" Value="{Binding PixelPerMs}" Minimum="0.05" Maximum="1" VerticalAlignment="Center"
                             Margin="10 0 0 0"/>
+                    <materialDesign:PackIcon Kind="MagnifyPlusOutline" Width="22" Height="22" VerticalAlignment="Center" />
+
+
                     <materialDesign:Chip Background="{DynamicResource MaterialDesign.Brush.Primary}" Margin="0 0 30 0">
                         <materialDesign:PackIcon Kind="MagnifyPlus" Width="22" Height="22" VerticalAlignment="Center" />
                     </materialDesign:Chip>
