@@ -18,7 +18,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _currentMidiFile;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private ChunkContext _selectedChunk;
-    [ObservableProperty] private double _currentSongPositionMs;
+    
     [ObservableProperty] private bool _isPlaying;
     [ObservableProperty] private DoubleCollection _measureStartTimesInMs;
     [ObservableProperty] private IReadOnlyList<string> _inputDevices;
@@ -26,6 +26,10 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _selectedOutputDevice;
     [ObservableProperty] private string _selectedInputDevice;
     [ObservableProperty] private bool _isReduced = true;
+
+    [ObservableProperty] private bool _isUserSeeking = false;
+
+    [ObservableProperty] private double _currentTimeMs;
 
 
     [ObservableProperty] private SongContext _song;
@@ -41,7 +45,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private HashSet<int> _mutedChannels = new();
 
-    private bool _isUserSeeking = false;
+    
 
 
     partial void OnSpeedChanged(double value)
@@ -110,6 +114,18 @@ public partial class MainWindowViewModel : ObservableObject
         LoadSong();
     }
 
+    partial void OnIsUserSeekingChanged(bool value)
+    {
+        if (!value)
+        {
+            foreach (var lane in Song.Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
+            {
+                lane.StateChanged?.Invoke(this, EventArgs.Empty);
+            }
+            _playback.Start();
+            _playback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentTimeMs)));
+        }
+    }
 
     private NotePlaybackData NoteCallback(NotePlaybackData rawNoteData, long rawTime, long rawLength, TimeSpan playbackTime)
     {
@@ -148,9 +164,10 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void CompositionTarget_Rendering(object? sender, EventArgs e)
     {
-        if (_playback != null && !_isUserSeeking)
+        if (_playback != null && !IsUserSeeking)
         {
-            CurrentSongPositionMs = _playback.GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
+            CurrentTimeMs = _playback.GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
+
         }
     }
 
@@ -174,7 +191,7 @@ public partial class MainWindowViewModel : ObservableObject
 
             if (SelectedChunk.TryGetLane(laneId, out var lane))
             {
-                lane.InputReceived?.Invoke(this, new InputArg(noteOn.NoteNumber, _currentSongPositionMs));
+                lane.InputReceived?.Invoke(this, new InputArg(noteOn.NoteNumber, _currentTimeMs));
             }
 
             Debug.WriteLine($"{noteOn.NoteNumber}, {noteOn.Channel}, {noteOn.EventType}");
@@ -209,24 +226,5 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _playback.Stop();
         IsPlaying = false;
-    }
-
-    [RelayCommand]
-    private void StartSeeking()
-    {
-        _isUserSeeking = true;
-        _playback.Stop();
-    }
-
-    [RelayCommand]
-    private async Task StopSeeking()
-    {
-        foreach (var lane in Song.Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
-        {
-            lane.StateChanged?.Invoke(this, EventArgs.Empty);
-        }
-        _playback.Start();
-        _playback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentSongPositionMs)));
-        _isUserSeeking = false;
     }
 }

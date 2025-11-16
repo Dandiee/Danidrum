@@ -80,14 +80,13 @@ public class MeasuresControl : Control
         if (Song == null)
             return;
 
-        var measurePen = new Pen(MeasureBrush, MeasureThickness);
-        var subdivisionPen = new Pen(SubdivisionBrush, SubdivisionThickness);
+        var pxPerMs = PixelPerMs == 0
+            ? ActualWidth / Song.LengthMs
+            : PixelPerMs;
 
         foreach (var measure in Song.Measures)
         {
-            var measurePosition = PixelPerMs * measure.StartTimeMs;
-            var subdivisionOffset = PixelPerMs * (measure.LengthMs / measure.TimeSignature.Denominator);
-
+            var measurePosition = pxPerMs * measure.StartTimeMs;
             if (_measurePen != null)
             {
                 dc.DrawLine(_measurePen,
@@ -96,14 +95,14 @@ public class MeasuresControl : Control
             }
 
             var subdivisions = measure.TimeSignature.Denominator;
-
             if (_subdivisionPen != null)
             {
+                var subdivisionOffset = pxPerMs * (measure.LengthMs / measure.TimeSignature.Denominator);
                 for (var i = 1; i < subdivisions; i++)
                 {
                     var subdivisionPosition = measurePosition + subdivisionOffset * i;
 
-                    dc.DrawLine(subdivisionPen,
+                    dc.DrawLine(_subdivisionPen,
                         point0: new Point(subdivisionPosition, 0),
                         point1: new Point(subdivisionPosition, ActualHeight));
                 }
@@ -123,8 +122,6 @@ public class MeasuresControl : Control
 
                 dc.DrawText(formattedText, new Point(measurePosition + 10, 7));
             }
-
-
         }
     }
 

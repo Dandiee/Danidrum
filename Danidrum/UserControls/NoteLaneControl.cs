@@ -87,7 +87,7 @@ public class NoteLaneControl : FrameworkElement
             dc.DrawRoundedRectangle(
                 brush: _lane == null
                     ? NoteBrush
-                    : (DataContext as MainWindowViewModel).CurrentSongPositionMs > note.StartTimeMs ? MissedNoteBrush : NoteBrush, 
+                    : (DataContext as MainWindowViewModel).CurrentTimeMs > note.StartTimeMs ? MissedNoteBrush : NoteBrush, 
                 pen:null,
                 rectangle: new Rect(
                     x: (note.StartTimeMs - note.DurationMs/2) * pixelPerMs + margin,

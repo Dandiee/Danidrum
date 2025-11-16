@@ -123,46 +123,15 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Margin="20">
+            <Grid Height="100">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <ItemsControl ItemsSource="{Binding SelectedChunk.Lanes}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <userControls:NoteLaneControl Height="10" />
-                        </DataTemplate>
-                        
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <!--<Slider x:Name="PositionSlider"
-                        Grid.Column="0"
-                        Minimum="0"
-                        Ticks="{Binding MeasureStartTimesInMs}"
-                        IsSnapToTickEnabled="True"
-                        TickPlacement="BottomRight"
-                        Maximum="{Binding Song.LengthMs}"
-                        Value="{Binding CurrentSongPositionMs}"
-                        SelectionStart="1000"
-                        SelectionEnd="5000"
-                        
-                        IsSelectionRangeEnabled="True"
-                        Foreground="{DynamicResource MaterialDesign.Brush.Foreground}">
-
-
-                    <b:Interaction.Triggers>
-                        <b:EventTrigger EventName="PreviewMouseLeftButtonDown">
-                            <b:InvokeCommandAction Command="{Binding StartSeekingCommand}" />
-                        </b:EventTrigger>
-
-                        <b:EventTrigger EventName="PreviewMouseLeftButtonUp">
-                            <b:InvokeCommandAction Command="{Binding StopSeekingCommand}" />
-                        </b:EventTrigger>
-                    </b:Interaction.Triggers>
-                </Slider>-->
+                <userControls:TimeLineUserControl CurrentTimeMs="{Binding CurrentTimeMs, Mode=TwoWay}" 
+                                                  IsUserSeeking="{Binding IsUserSeeking, Mode=TwoWay}"
+                                                  Song="{Binding Song}" />
 
                 <Button Command="{Binding TogglePlayPauseCommand}" 
                         Margin="20 0 0 0"
@@ -178,7 +147,7 @@
                                              Chunk="{Binding SelectedChunk}"
                                              DataContext="{Binding}"
                                              VisualLatencyInMs="{Binding VisualLatencyInMs}"
-                                             CurrentTimeMs="{Binding CurrentSongPositionMs}"/>
+                                             CurrentTimeMs="{Binding CurrentTimeMs}"/>
 
             <Grid Grid.Row="2">
                 <Grid.ColumnDefinitions>
