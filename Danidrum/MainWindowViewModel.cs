@@ -10,6 +10,7 @@ using System.Windows.Media;
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Microsoft.Win32;
+using NAudio.Wave.Asio;
 
 namespace Danidrum;
 
@@ -233,7 +234,8 @@ public partial class MainWindowViewModel : ObservableObject
         if (value != null)
         {
             //_outputDevice = OutputDevice.GetByName(value);
-            _outputDevice = new AsioSineSynthOutputDevice("TD-07");
+            
+            _outputDevice = new AsioPolyphonicSynthDevice(AsioDriver.GetAsioDriverNames()[0]);
             if (_playback != null)
             {
                 _playback.OutputDevice = _outputDevice;
