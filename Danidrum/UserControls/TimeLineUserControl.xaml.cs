@@ -1,5 +1,4 @@
 ﻿
-using System.DirectoryServices.ActiveDirectory;
 using Danidrum.Services;
 using System.Windows;
 using System.Windows.Controls.Primitives;
@@ -27,7 +26,21 @@ public partial class TimeLineUserControl
         set => SetValue(CurrentPositionProperty, value);
     }
 
-    public static readonly DependencyProperty SongProperty = DependencyProperty.Register(nameof(Song), typeof(SongContext), typeof(TimeLineUserControl), new PropertyMetadata(default(SongContext)));
+    public static readonly DependencyProperty SongProperty = DependencyProperty.Register(nameof(Song), typeof(SongContext), typeof(TimeLineUserControl), new PropertyMetadata(default(SongContext), PropertyChangedCallback));
+
+    private double _pxPerMs;
+    private List<double> _ticks;
+
+    private static void PropertyChangedCallback(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var control = d as TimeLineUserControl;
+
+        control._pxPerMs = control.TimeLineContainer.ActualWidth / control.Song.LengthMs;
+        control._ticks = control.Song.Measures.Select(e => e.StartTimeMs * control._pxPerMs).ToList();
+
+        control.RangeEndMs = control.Song.LengthMs - control.RangeStart / control.TimeLineContainer.ActualWidth * control.RangeStart;
+    }
+
     public SongContext Song
     {
         get => (SongContext)GetValue(SongProperty);
@@ -65,22 +78,8 @@ public partial class TimeLineUserControl
         var deltaTime = e.HorizontalChange / pxPerMs;
         var targetTimeMs = CurrentTimeMs + deltaTime;
 
-        
+
         CurrentTimeMs = Math.Clamp(targetTimeMs, 0, Song.LengthMs);
-    }
-
-        
-    private void PositionThumb_OnDragStarted(object sender, DragStartedEventArgs e)
-    {
-        _originalIsPlaying = IsPlaying;
-        IsPlaying = false;
-        IsUserSeeking = true;
-    }
-
-    private void PositionThumb_OnDragCompleted(object sender, DragCompletedEventArgs e)
-    {
-        IsUserSeeking = false;
-        IsPlaying = _originalIsPlaying;
     }
 
 
@@ -114,10 +113,16 @@ public partial class TimeLineUserControl
         _isSeeking = true;
     }
 
-    private void OnSeekCompleted(object sender, EventArgs e)
+    private void OnSeekCompleted(object sender, MouseEventArgs e)
     {
         if (_isSeeking)
         {
+            IsUserSeeking = true;
+            var ratio = e.MouseDevice.GetPosition(TimeLineContainer).X / TimeLineContainer.ActualWidth;
+            var targetTime = Song.LengthMs * ratio;
+            CurrentTimeMs = targetTime;
+            IsUserSeeking = false;
+
             _isSeeking = false;
             IsPlaying = _originalIsPlaying;
         }
@@ -130,8 +135,75 @@ public partial class TimeLineUserControl
             IsUserSeeking = true;
             var ratio = e.MouseDevice.GetPosition(TimeLineContainer).X / TimeLineContainer.ActualWidth;
             var targetTime = Song.LengthMs * ratio;
-            CurrentTimeMs = targetTime;
+            CurrentTimeMs = Math.Clamp(targetTime, RangeStartMs, RangeEndMs);
             IsUserSeeking = false;
         }
     }
+
+    public static readonly DependencyProperty RangeStartProperty = DependencyProperty.Register(nameof(RangeStart), typeof(double), typeof(TimeLineUserControl), new PropertyMetadata(0d));
+    public double RangeStart
+    {
+        get => (double)GetValue(RangeStartProperty);
+        set => SetValue(RangeStartProperty, value);
+    }
+
+    public static readonly DependencyProperty RangeEndProperty = DependencyProperty.Register(nameof(RangeEnd), typeof(double), typeof(TimeLineUserControl), new PropertyMetadata(0d));
+    public double RangeEnd
+    {
+        get => (double)GetValue(RangeEndProperty);
+        set => SetValue(RangeEndProperty, value);
+    }
+
+
+    private void OnRangeDragDelta(object sender, DragDeltaEventArgs e)
+    {
+        IsPlaying = false;
+        IsUserSeeking = true;
+        _isSeeking = true;
+
+        if (sender == StartRangeThumb)
+        {
+            var nearest = NearestTick(Math.Clamp(e.HorizontalChange + RangeStart, 0, TimeLineContainer.ActualWidth - RangeEnd));
+            if (nearest < TimeLineContainer.ActualWidth - RangeEnd)
+            {
+                RangeStart = NearestTick(Math.Clamp(e.HorizontalChange + RangeStart, 0, TimeLineContainer.ActualWidth - RangeEnd));
+                RangeStartMs = RangeStart / TimeLineContainer.ActualWidth * Song.LengthMs;
+            }
+        }
+        else
+        {
+            var nearest = NearestTick(Math.Clamp(RangeEnd - e.HorizontalChange, 0, TimeLineContainer.ActualWidth - RangeStart));
+            if (TimeLineContainer.ActualWidth - nearest > RangeStart)
+            {
+                RangeEnd = NearestTick(Math.Clamp(RangeEnd - e.HorizontalChange, 0, TimeLineContainer.ActualWidth - RangeStart));
+                RangeEndMs = Song.LengthMs - RangeEnd / TimeLineContainer.ActualWidth * Song.LengthMs;
+            }
+        }
+
+        if (RangeStartMs >= RangeEndMs)
+        {
+
+        }
+
+        CurrentTimeMs = Math.Clamp(CurrentTimeMs, RangeStartMs, RangeEndMs);
+
+        _isSeeking = false;
+        IsUserSeeking = false;
+    }
+
+    public static readonly DependencyProperty RangeStartMsProperty = DependencyProperty.Register(nameof(RangeStartMs), typeof(double), typeof(TimeLineUserControl), new PropertyMetadata(0d));
+    public double RangeStartMs
+    {
+        get => (double)GetValue(RangeStartMsProperty);
+        set => SetValue(RangeStartMsProperty, value);
+    }
+
+    public static readonly DependencyProperty RangeEndMsProperty = DependencyProperty.Register(nameof(RangeEndMs), typeof(double), typeof(TimeLineUserControl), new PropertyMetadata(0d));
+    public double RangeEndMs
+    {
+        get => (double)GetValue(RangeEndMsProperty);
+        set => SetValue(RangeEndMsProperty, value);
+    }
+
+    private double NearestTick(double value) => _ticks.MinBy(e => Math.Abs(value - e));
 }
