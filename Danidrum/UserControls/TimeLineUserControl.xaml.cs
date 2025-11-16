@@ -1,4 +1,5 @@
 ﻿
+using System.DirectoryServices.ActiveDirectory;
 using Danidrum.Services;
 using System.Windows;
 using System.Windows.Controls.Primitives;
@@ -31,6 +32,13 @@ public partial class TimeLineUserControl
     {
         get => (SongContext)GetValue(SongProperty);
         set => SetValue(SongProperty, value);
+    }
+
+    public static readonly DependencyProperty IsPlayingProperty = DependencyProperty.Register(nameof(IsPlaying), typeof(bool), typeof(TimeLineUserControl), new PropertyMetadata(false));
+    public bool IsPlaying
+    {
+        get => (bool)GetValue(IsPlayingProperty);
+        set => SetValue(IsPlayingProperty, value);
     }
 
     public static readonly DependencyProperty IsUserSeekingProperty = DependencyProperty.Register(nameof(IsUserSeeking), typeof(bool), typeof(TimeLineUserControl), new PropertyMetadata(false));
@@ -86,12 +94,33 @@ public partial class TimeLineUserControl
         set => SetValue(RightMaskWidthProperty, value);
     }
 
-    private void TimeLineContainer_OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private bool _originalIsPlaying;
+    private bool _isSeeking;
+    private void OnSeekStarted(object sender, EventArgs e)
     {
-        IsUserSeeking = true;
-        var ratio = e.MouseDevice.GetPosition(TimeLineContainer).X / TimeLineContainer.ActualWidth;
-        var targetTime = Song.LengthMs * ratio;
-        CurrentTimeMs = targetTime;
-        IsUserSeeking = false;
+        _originalIsPlaying = IsPlaying;
+        IsPlaying = false;
+        _isSeeking = true;
+    }
+
+    private void OnSeekCompleted(object sender, EventArgs e)
+    {
+        if (_isSeeking)
+        {
+            _isSeeking = false;
+            IsPlaying = _originalIsPlaying;
+        }
+    }
+
+    private void TimeLineUserControl_OnMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_isSeeking)
+        {
+            IsUserSeeking = true;
+            var ratio = e.MouseDevice.GetPosition(TimeLineContainer).X / TimeLineContainer.ActualWidth;
+            var targetTime = Song.LengthMs * ratio;
+            CurrentTimeMs = targetTime;
+            IsUserSeeking = false;
+        }
     }
 }

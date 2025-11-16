@@ -128,10 +128,8 @@
                                               Height="100"
                                               VisibleAreaMs="{Binding VisibleAreaMs, Mode=OneWay}"
                                               IsUserSeeking="{Binding IsUserSeeking, Mode=TwoWay}"
+                                              IsPlaying="{Binding IsPlaying, Mode=TwoWay}"
                                               Song="{Binding Song}" />
-
-
-
 
             <userControls:NoteHighwayControl Grid.Row="1"
                                              VisibleAreaMs="{Binding VisibleAreaMs, Mode=OneWayToSource}"
@@ -149,13 +147,18 @@
 
                 <StackPanel Orientation="Horizontal" Margin="10">
 
+                    <ToggleButton Style="{StaticResource MaterialDesignActionToggleButton}"
+                                  IsChecked="{Binding IsPlaying}"
+                                  Margin="8,0,0,0"
+                                  VerticalAlignment="Center">
 
-                    <Button Command="{Binding TogglePlayPauseCommand}" 
-                            Margin="20 0 0 0"
-                            ToolTip="Play/Pause (Space)" Grid.Column="1">
-                        <materialDesign:PackIcon Width="24" Height="24"
-                                                 Kind="{Binding IsPlaying, Converter={StaticResource BoolToPlayPauseIconConverter}}"/>
-                    </Button>
+                        <materialDesign:PackIcon Kind="Play" />
+
+                        <materialDesign:ToggleButtonAssist.OnContent>
+                            <materialDesign:PackIcon Kind="Pause" />
+                        </materialDesign:ToggleButtonAssist.OnContent>
+
+                    </ToggleButton>
 
                     <TextBlock VerticalAlignment="Center" Text="Reduce" Margin="20 0 0 0"/>
                     <ToggleButton IsChecked="{Binding IsReduced}" Margin="20 0 0 0"/>

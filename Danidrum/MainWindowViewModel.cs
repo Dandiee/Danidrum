@@ -46,30 +46,23 @@ public partial class MainWindowViewModel : ObservableObject
 
     private HashSet<int> _mutedChannels = new();
 
-    
-
-
     partial void OnSpeedChanged(double value)
     {
         _playback.Speed = value;
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute * value;
     }
 
-    partial void OnVisibleAreaMsChanged(double value)
+    partial void OnIsPlayingChanged(bool value)
     {
+        if (value) _playback.Start();
+        else _playback.Stop();
     }
 
-    partial void OnIsReducedChanged(bool value)
-    {
-        if (IsPlaying)
-        {
-            StopPlayback();
-        }
-        LoadSong();
-    }
+    partial void OnIsReducedChanged(bool value) => LoadSong();
 
     private void LoadSong()
     {
+        IsPlaying = false;
         Song = new SongContext("nirv.mid", IsReduced);
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
@@ -88,7 +81,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         _playback = Song.Midi.GetPlayback(_outputDevice);
-        _playback.NoteCallback = NoteCallback;
+        _playback.NoteCallback = ChannelMuteFilter;
         _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
     }
 
@@ -121,6 +114,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnIsUserSeekingChanged(bool value)
     {
+        if (IsPlaying) throw new Exception("fuck off");
+
         if (!value)
         {
             foreach (var lane in Song.Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
@@ -131,14 +126,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private NotePlaybackData NoteCallback(NotePlaybackData rawNoteData, long rawTime, long rawLength, TimeSpan playbackTime)
-    {
-        if (_mutedChannels.Contains(rawNoteData.Channel))
-        {
-            return null;
-        }
-        return rawNoteData;
-    }
+    private NotePlaybackData ChannelMuteFilter(NotePlaybackData rawNoteData, long rawTime, long rawLength, TimeSpan playbackTime) => _mutedChannels.Contains(rawNoteData.Channel) ? null : rawNoteData;
 
     [RelayCommand]
     private void MuteStateChanged(ChunkContext chunk)
@@ -150,6 +138,10 @@ public partial class MainWindowViewModel : ObservableObject
 
         _mutedChannels = Song.Channels.SelectMany(e => e.Chunks).Where(e => e.IsMuted).Select(e => e.ChannelId).ToHashSet();
     }
+
+    [RelayCommand]
+    private void TogglePlayPause() => IsPlaying = !IsPlaying;
+    
 
     private void PlaybackOnNotesPlaybackFinished(object? sender, NotesEventArgs e)
     {
@@ -171,18 +163,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (_playback != null && !IsUserSeeking)
         {
             CurrentTimeMs = _playback.GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
-
         }
-    }
-
-    [RelayCommand]
-    private void StartPlayback()
-    {
-        
-        
-        _playback.Start();
-        
-        IsPlaying = true;
     }
 
     private void OnMidiEvent(object sender, MidiEventReceivedEventArgs e)
@@ -203,32 +184,4 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     public record InputArg(SevenBitNumber NoteNumber, double TimeInMs);
-
-
-    [RelayCommand]
-    private void PausePlayback()
-    {
-        _playback.Stop();
-        IsPlaying = false;
-    }
-
-    [RelayCommand]
-    private void TogglePlayPause()
-    {
-        if (IsPlaying)
-        {
-            StopPlayback();
-        }
-        else
-        {
-            StartPlayback();
-        }
-    }
-
-    [RelayCommand] // This now creates an IAsyncRelayCommand
-    private void StopPlayback()
-    {
-        _playback.Stop();
-        IsPlaying = false;
-    }
 }
