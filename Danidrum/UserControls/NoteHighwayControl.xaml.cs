@@ -73,6 +73,9 @@ public partial class NoteHighwayControl
     {
         if (Chunk == null) return;
 
+
+        VisibleAreaMs = NoteCanvasScroller.ActualWidth / PixelPerMs;
+
         LanesGrid.RowDefinitions.Clear();
         LanesGrid.Children.Clear();
 
@@ -115,6 +118,13 @@ public partial class NoteHighwayControl
             Grid.SetRow(titleHost, i + 1);
             LaneNamesGrid.Children.Add(titleHost);
         }
+    }
+
+    public static readonly DependencyProperty VisibleAreaMsProperty = DependencyProperty.Register(nameof(VisibleAreaMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0d));
+    public double VisibleAreaMs
+    {
+        get => (double)GetValue(VisibleAreaMsProperty);
+        set => SetValue(VisibleAreaMsProperty, value);
     }
 
     public static readonly DependencyProperty VisualLatencyInMsProperty = DependencyProperty.Register(nameof(VisualLatencyInMs), typeof(double), typeof(NoteHighwayControl), new PropertyMetadata(0d));

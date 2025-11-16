@@ -5,49 +5,65 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Danidrum.UserControls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800"
+             MouseLeftButtonUp="TimeLineContainer_OnMouseLeftButtonUp">
     <Border BorderBrush="{DynamicResource MaterialDesign.Brush.Primary}" BorderThickness="1" 
-            Background="{DynamicResource MaterialDesign.Brush.Primary.Dark}"
-            x:Name="ContainerBorder">
-        <Grid Margin="10">
-            <local:MeasuresControl Song="{Binding Song}" 
-                                   MeasureBrush="{DynamicResource MaterialDesign.Brush.Primary}" MeasureThickness="0.5"/>
+            Background="{DynamicResource MaterialDesign.Brush.Primary.Dark}">
+        <Border Margin="10">
+            <Grid x:Name="TimeLineContainer">
+                <local:MeasuresControl Song="{Binding Song}" 
 
-            <ItemsControl ItemsSource="{Binding SelectedChunk.Lanes}" Width="{Binding ElementName=ContainerBorder, Path=ActualWidth}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <local:NoteLaneControl Height="10" />
-                    </DataTemplate>
+                                       MeasureBrush="{DynamicResource MaterialDesign.Brush.Primary}" MeasureThickness="0.5"/>
 
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <ItemsControl ItemsSource="{Binding SelectedChunk.Lanes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <local:NoteLaneControl Height="10" />
+                        </DataTemplate>
 
-            <Canvas x:Name="PositionCanvas">
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                <Thumb x:Name="PositionThumb"
-                       HorizontalAlignment="Left"
-                       Width="10" 
-                       Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}"
-                       DragDelta="PositionThumb_DragDelta"
-                       DragStarted="PositionThumb_OnDragStarted"
-                       DragCompleted="PositionThumb_OnDragCompleted"
-                       Canvas.Left="{Binding CurrentPosition, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Mode=TwoWay}">
-                    <Thumb.Style>
-                        <Style TargetType="Thumb">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Thumb">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                Width="{TemplateBinding Width}" 
-                                                Height="{Binding ElementName=PositionCanvas, Path=ActualHeight}"/>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Thumb.Style>
-                </Thumb>
-            </Canvas>
-        </Grid>
+                <Canvas x:Name="PositionCanvas">
+
+                    <Thumb x:Name="PositionThumb"
+                           HorizontalAlignment="Left"
+                           Width="4" 
+                           Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}"
+                           DragDelta="PositionThumb_DragDelta"
+                           DragStarted="PositionThumb_OnDragStarted"
+                           DragCompleted="PositionThumb_OnDragCompleted"
+                           Margin="-2 0 0 0"
+                           Canvas.Left="{Binding CurrentPosition, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Mode=TwoWay}">
+                        <Thumb.Style>
+                            <Style TargetType="Thumb">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="{TemplateBinding Background}" 
+                                                    Width="{TemplateBinding Width}" 
+                                                    Height="{Binding ElementName=PositionCanvas, Path=ActualHeight}"/>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Thumb.Style>
+                    </Thumb>
+                </Canvas>
+
+                <Border BorderThickness="0 0 1 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
+                        IsHitTestVisible="False"
+                        Background="Transparent" Width="{Binding LeftMaskWidth, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" HorizontalAlignment="Left">
+                    <Grid Opacity="0.5" Background="Black" />
+                </Border>
+
+                <Border BorderThickness="1 0 0 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
+                        IsHitTestVisible="False"
+                        Background="Transparent" Width="{Binding RightMaskWidth, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" HorizontalAlignment="Right">
+                    <Grid Opacity="0.5" Background="Black" />
+                </Border>
+            </Grid>
+        </Border>
         
     </Border>
 </UserControl>

@@ -26,6 +26,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _selectedOutputDevice;
     [ObservableProperty] private string _selectedInputDevice;
     [ObservableProperty] private bool _isReduced = true;
+    [ObservableProperty] private double _visibleAreaMs;
 
     [ObservableProperty] private bool _isUserSeeking = false;
 
@@ -52,6 +53,10 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _playback.Speed = value;
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute * value;
+    }
+
+    partial void OnVisibleAreaMsChanged(double value)
+    {
     }
 
     partial void OnIsReducedChanged(bool value)

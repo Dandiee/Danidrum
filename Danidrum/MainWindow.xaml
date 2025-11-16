@@ -123,26 +123,18 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Grid Height="100">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
 
-                <userControls:TimeLineUserControl CurrentTimeMs="{Binding CurrentTimeMs, Mode=TwoWay}" 
-                                                  IsUserSeeking="{Binding IsUserSeeking, Mode=TwoWay}"
-                                                  Song="{Binding Song}" />
+            <userControls:TimeLineUserControl CurrentTimeMs="{Binding CurrentTimeMs, Mode=TwoWay}" 
+                                              Height="100"
+                                              VisibleAreaMs="{Binding VisibleAreaMs, Mode=OneWay}"
+                                              IsUserSeeking="{Binding IsUserSeeking, Mode=TwoWay}"
+                                              Song="{Binding Song}" />
 
-                <Button Command="{Binding TogglePlayPauseCommand}" 
-                        Margin="20 0 0 0"
-                        ToolTip="Play/Pause (Space)" Grid.Column="1">
-                    <materialDesign:PackIcon Width="24" Height="24"
-                                             Kind="{Binding IsPlaying, Converter={StaticResource BoolToPlayPauseIconConverter}}"/>
-                </Button>
 
-            </Grid>
+
 
             <userControls:NoteHighwayControl Grid.Row="1"
+                                             VisibleAreaMs="{Binding VisibleAreaMs, Mode=OneWayToSource}"
                                              PixelPerMs="{Binding PixelPerMs}"
                                              Chunk="{Binding SelectedChunk}"
                                              DataContext="{Binding}"
@@ -156,6 +148,15 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" Margin="10">
+
+
+                    <Button Command="{Binding TogglePlayPauseCommand}" 
+                            Margin="20 0 0 0"
+                            ToolTip="Play/Pause (Space)" Grid.Column="1">
+                        <materialDesign:PackIcon Width="24" Height="24"
+                                                 Kind="{Binding IsPlaying, Converter={StaticResource BoolToPlayPauseIconConverter}}"/>
+                    </Button>
+
                     <TextBlock VerticalAlignment="Center" Text="Reduce" Margin="20 0 0 0"/>
                     <ToggleButton IsChecked="{Binding IsReduced}" Margin="20 0 0 0"/>
 
