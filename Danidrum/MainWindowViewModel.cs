@@ -237,11 +237,11 @@ public partial class MainWindowViewModel : ObservableObject
 
             //_outputDevice = new AsioPolyphonicSynthDevice(AsioDriver.GetAsioDriverNames()[0]);
 
-            string soundFontPath = "GeneralUser_GS_v1.471.sf2";
+            string soundFontPath = "GeneralUser-GS.sf2";
             string asioDriverName = AsioDriver.GetAsioDriverNames()[0];
 
             // Use this as your OutputDevice for DryWetMidi's Playback
-            IOutputDevice synthDevice = new AsioSoundFontSynthDevice(asioDriverName, soundFontPath);
+            _outputDevice = new AsioSoundFontSynthDevice(asioDriverName, soundFontPath);
             if (_playback != null)
             {
                 _playback.OutputDevice = _outputDevice;
