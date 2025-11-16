@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Danidrum.UserControls"
              xmlns:services="clr-namespace:Danidrum.Services"
+             xmlns:danidrum="clr-namespace:Danidrum"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
 
@@ -12,24 +13,26 @@
         <local:MidLineConverter x:Key="MidLineConverter"/>
 
         <DataTemplate x:Key="LaneNameTemplate" DataType="{x:Type services:LaneContext}">
-            <Border Height="100"
-                    BorderBrush="{DynamicResource MaterialDesign.Brush.OutlineVariant}"
-                    VerticalAlignment="Center"
-                    BorderThickness="0,0,1,1">
-                <TextBlock Text="{Binding Name}"
-                           Style="{StaticResource MaterialDesignBody1TextBlock}"
-                           Margin="10,0"
-                           VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"/>
+            <Border BorderBrush="{DynamicResource MaterialDesign.Brush.OutlineVariant}"
+                    VerticalAlignment="Stretch"
+                    HorizontalAlignment="Stretch"
+                    Background="{DynamicResource MaterialDesign.Brush.Primary}"
+                    CornerRadius="0 10 10 0"
+                    BorderThickness="0,0,0,2">
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="10 0 0 0"
+                           FontWeight="Bold"
+                           TextTrimming="CharacterEllipsis"
+                           Style="{StaticResource MaterialDesignBody2TextBlock}"/>
+                <!--<danidrum:DrumIcon Articulation="{Binding KitArticulation}" VerticalAlignment="Center" Margin="10 0 0 0"/>-->
             </Border>
         </DataTemplate>
     </UserControl.Resources>
 
 
-    <Grid>
+    <Grid Background="{DynamicResource MaterialDesign.Brush.Primary.Dark}">
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="120"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
@@ -47,7 +50,7 @@
                 </Grid>
             </ScrollViewer>
 
-            <Border Width="2" Background="Red" HorizontalAlignment="Center" VerticalAlignment="Stretch" IsHitTestVisible="False" />
+            <Border Width="1" Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}" HorizontalAlignment="Center" VerticalAlignment="Stretch" IsHitTestVisible="False" />
 
         </Grid>
     </Grid>

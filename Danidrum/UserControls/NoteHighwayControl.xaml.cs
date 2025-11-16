@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.CodeDom;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -28,8 +29,15 @@ public class MidLineConverter : IValueConverter
 
 public partial class NoteHighwayControl
 {
+    private readonly SolidColorBrush BarBrush;
+    private readonly SolidColorBrush SubdivisionBrush;
+    private const double MeasureInfoHeight = 30;
+
     public NoteHighwayControl()
     {
+        BarBrush = FindResource("MaterialDesign.Brush.Primary.Foreground") as SolidColorBrush;
+        SubdivisionBrush = FindResource("MaterialDesign.Brush.Primary.Dark.Foreground") as SolidColorBrush;
+
         InitializeComponent();
     }
 
@@ -87,8 +95,9 @@ public partial class NoteHighwayControl
                 X2 = measurePosition,
                 Y1 = 0,
                 Y2 = LanesGrid.ActualHeight,
+                StrokeThickness = 0.5,
 
-                Stroke = Brushes.White,
+                Stroke = BarBrush
             });
 
             var subdivisions = measure.TimeSignature.Denominator;
@@ -103,7 +112,9 @@ public partial class NoteHighwayControl
                     Y1 = 0,
                     Y2 = LanesGrid.ActualHeight,
 
-                    Stroke = Brushes.DarkGray,
+                    StrokeThickness = 0.1,
+
+                    Stroke = SubdivisionBrush,
                 });
             }
 
@@ -113,14 +124,14 @@ public partial class NoteHighwayControl
             };
             backgroundCanvas.Children.Add(measureInfo);
             Canvas.SetLeft(measureInfo, measurePosition + 10);
-            Canvas.SetTop(measureInfo, 0);
+            Canvas.SetTop(measureInfo, 7);
         }
 
-        LanesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) });
-        LaneNamesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(50) });
+        LanesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MeasureInfoHeight) });
+        LaneNamesGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MeasureInfoHeight) });
 
         var laneNameTemplate = TryFindResource("LaneNameTemplate") as DataTemplate;
-        var laneHeight = (ActualHeight - 50) / Chunk.Lanes.Count;
+        var laneHeight = (ActualHeight - MeasureInfoHeight) / Chunk.Lanes.Count;
 
         for (var i = 0; i < Chunk.Lanes.Count; i++)
         {

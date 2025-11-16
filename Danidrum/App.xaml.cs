@@ -13,7 +13,6 @@ public partial class App : Application
 
         var services = new ServiceCollection();
         services.AddTransient<MainWindowViewModel>();
-        services.AddSingleton<PlaybackService>();
 
         Services = services.BuildServiceProvider();
     }

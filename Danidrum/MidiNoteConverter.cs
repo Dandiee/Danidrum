@@ -198,23 +198,23 @@ public static class Articulation
     public static readonly IReadOnlyDictionary<KitArticulation, string> KitArticulationToName = new Dictionary<KitArticulation, string>
     {
         // Cymbals
-        { KitArticulation.Crash, "Crash Cymbal" },
-        { KitArticulation.Ride, "Ride Cymbal" },
+        { KitArticulation.Crash, "Crash" },
+        { KitArticulation.Ride, "Ride" },
         { KitArticulation.OpenHiHat, "Open Hi-Hat" },
         { KitArticulation.ClosedHiHat, "Closed Hi-Hat" },
 
         // Drums
         { KitArticulation.HighTom, "High Tom" },
         { KitArticulation.MidTom, "Mid Tom" },
-        { KitArticulation.LowTom, "Low Tom (Floor)" },
-        { KitArticulation.Snare, "Snare Drum" },
-        { KitArticulation.Kick, "Kick Drum" },
+        { KitArticulation.LowTom, "Low Tom" },
+        { KitArticulation.Snare, "Snare" },
+        { KitArticulation.Kick, "Kick" },
 
         // Control / Effects
         { KitArticulation.PedalHiHat, "Hi-Hat Pedal" },
         
         // Auxiliary / Unmapped
-        { KitArticulation.OtherPercussion, "Other Percussion/FX" }
+        { KitArticulation.OtherPercussion, "Other" }
     };
 
 

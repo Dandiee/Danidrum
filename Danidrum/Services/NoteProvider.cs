@@ -44,7 +44,7 @@ public class SongContext
         IsReduced = useReduction;
         TempoMap = Midi.GetTempoMap();
         var channelGroups = Midi.GetTrackChunks().GroupBy(grp => grp.Events.GetNotes().First().Channel);
-        Channels = channelGroups.Select(grp => new ChannelContext(this, grp, useReduction)).ToList();
+        Channels = channelGroups.Select(grp => new ChannelContext(this, grp, useReduction)).OrderBy(e => e.ChannelId).ToList();
 
         //Chunks = Midi.GetTrackChunks().Select(chunk => new ChunkContext(this, chunk)).OrderBy(e => e.ChannelId).ToList();
         LengthMs = Midi.GetDuration<MetricTimeSpan>().TotalMilliseconds;
@@ -207,6 +207,7 @@ public class LaneContext
     public IReadOnlyList<NoteContext> Notes {get;}
     public EventHandler StateChanged { get; set; }
     public EventHandler<InputArg> InputReceived { get; set; }
+    public KitArticulation KitArticulation { get; set; }
 
     public LaneContext(ChunkContext chunk, int laneId, IReadOnlyList<Note> notes, bool useReduction)
     {
@@ -215,6 +216,7 @@ public class LaneContext
         Name = useReduction 
             ? Articulation.KitArticulationToName[(KitArticulation)LaneId]
             : Articulation.GetGmNoteName(LaneId, Chunk.ChannelId);
+        KitArticulation = (KitArticulation)LaneId;
         Notes = notes.Select(note => new NoteContext(this, note)).ToList();
     }
 }

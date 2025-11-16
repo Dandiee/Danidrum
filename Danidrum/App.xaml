@@ -15,8 +15,8 @@
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
 
 
-                
-            </ResourceDictionary.MergedDictionaries>
+
+</ResourceDictionary.MergedDictionaries>
 
             <Style TargetType="{x:Type Button}" 
                    BasedOn="{StaticResource MaterialDesignRaisedButton}" />
@@ -28,7 +28,7 @@
                    BasedOn="{StaticResource MaterialDesignListBox}" />
 
             <Style TargetType="{x:Type ComboBox}" 
-                   BasedOn="{StaticResource MaterialDesignOutlinedComboBox}" />
+                   BasedOn="{StaticResource MaterialDesignComboBox}" />
 
             <local:BoolToPlayPauseIconConverter x:Key="BoolToPlayPauseIconConverter" />
         </ResourceDictionary>

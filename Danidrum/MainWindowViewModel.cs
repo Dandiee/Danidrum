@@ -25,7 +25,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<string> _outputDevices;
     [ObservableProperty] private string _selectedOutputDevice;
     [ObservableProperty] private string _selectedInputDevice;
-    [ObservableProperty] private bool _isReduced;
+    [ObservableProperty] private bool _isReduced = true;
 
 
     [ObservableProperty] private SongContext _song;
@@ -61,7 +61,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void LoadSong()
     {
-        Song = new SongContext("Tool.mid", IsReduced);
+        Song = new SongContext("nirv.mid", IsReduced);
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
         MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
@@ -221,6 +221,10 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task StopSeeking()
     {
+        foreach (var lane in Song.Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
+        {
+            lane.StateChanged?.Invoke(this, EventArgs.Empty);
+        }
         _playback.Start();
         _playback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentSongPositionMs)));
         _isUserSeeking = false;

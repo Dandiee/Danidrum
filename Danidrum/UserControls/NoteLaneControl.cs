@@ -14,6 +14,8 @@ public class NoteLaneControl : FrameworkElement
     private readonly SolidColorBrush MissedNoteBrush = new(Color.FromRgb(255, 0, 0)); // Material Blue
     private readonly SolidColorBrush BackgroundBrush = new(Color.FromRgb(250, 250, 250));
 
+    private readonly SolidColorBrush SubdivisionBrush;
+
     private List<double> _userInputs = new();
 
     public NoteLaneControl(LaneContext lane, NoteHighwayControl owner)
@@ -21,7 +23,9 @@ public class NoteLaneControl : FrameworkElement
         _lane = lane;
         _owner = owner;
 
-        NoteBrush = FindResource("MaterialDesign.Brush.Primary") as SolidColorBrush;
+        SubdivisionBrush = FindResource("MaterialDesign.Brush.Primary.Light") as SolidColorBrush;
+
+        NoteBrush = FindResource("MaterialDesign.Brush.Secondary") as SolidColorBrush;
         NoteBrush.Freeze();
 
         lane.StateChanged += (_, _) =>
@@ -48,7 +52,8 @@ public class NoteLaneControl : FrameworkElement
             
         };
 
-        RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
+        //RenderOptions.SetEdgeMode(this, EdgeMode.Aliased);
+        
         SnapsToDevicePixels = true;
     }
 
@@ -57,7 +62,12 @@ public class NoteLaneControl : FrameworkElement
     {
         base.OnRender(dc);
 
-        var height = (Parent as Grid).ActualHeight / _lane.Chunk.Lanes.Count;
+        var laneHeight = (Parent as Grid).ActualHeight / _lane.Chunk.Lanes.Count;
+
+        var height = Math.Min(laneHeight - 10, 60);
+        var y = (laneHeight - height) / 2;
+
+        dc.DrawLine(new Pen(SubdivisionBrush, 0.8), new Point(0, 0), new Point(ActualWidth, 0));
 
         foreach (var note in _lane.Notes)
         {
@@ -66,9 +76,9 @@ public class NoteLaneControl : FrameworkElement
                 pen:null,
                 rectangle: new Rect(
                     x: (note.StartTimeMs - note.DurationMs/2) * _owner.PixelPerMs + 5,
-                    y: 5,
+                    y: y,
                     width: Math.Max(5, note.DurationMs * _owner.PixelPerMs - 10),
-                    height: height - 10)
+                    height: height)
                 , 5, 5);
         }
 
@@ -79,9 +89,9 @@ public class NoteLaneControl : FrameworkElement
                 pen: null,
                 rectangle: new Rect(
                     x: userInput * _owner.PixelPerMs,
-                    y: 5,
+                    y: y,
                     width: 10,
-                    height: height - 10),
+                    height: height),
                 radiusX: 5,
                 radiusY: 5);
         }
