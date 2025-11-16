@@ -122,7 +122,6 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 lane.StateChanged?.Invoke(this, EventArgs.Empty);
             }
-            _playback.Start();
             _playback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentTimeMs)));
         }
     }

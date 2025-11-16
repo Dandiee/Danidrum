@@ -49,8 +49,10 @@ public partial class TimeLineUserControl
     {
         var pxPerMs = ActualWidth / Song.LengthMs;
         var deltaTime = e.HorizontalChange / pxPerMs;
+        var targetTimeMs = CurrentTimeMs + deltaTime;
 
-        CurrentTimeMs += deltaTime;
+        
+        CurrentTimeMs = Math.Clamp(targetTimeMs, 0, Song.LengthMs);
     }
 
     private void PositionThumb_OnDragStarted(object sender, DragStartedEventArgs e) => IsUserSeeking = true;
