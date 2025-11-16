@@ -125,7 +125,7 @@ public partial class TimeLineUserControl
             IsUserSeeking = true;
             var ratio = e.MouseDevice.GetPosition(TimeLineContainer).X / TimeLineContainer.ActualWidth;
             var targetTime = Song.LengthMs * ratio;
-            CurrentTimeMs = targetTime;
+            CurrentTimeMs = Math.Clamp(targetTime, RangeStartMs, RangeEndMs);
             IsUserSeeking = false;
 
             _isSeeking = false;

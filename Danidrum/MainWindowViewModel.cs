@@ -64,12 +64,18 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnRangeStartMsChanged(double value)
     {
-
+        if (_playback != null)
+        {
+            _playback.PlaybackStart = new MetricTimeSpan(TimeSpan.FromMilliseconds(value));
+        }
     }
 
     partial void OnRangeEndMsChanged(double value)
     {
-
+        if (_playback != null)
+        {
+            _playback.PlaybackEnd = new MetricTimeSpan(TimeSpan.FromMilliseconds(value));
+        }
     }
 
     private void LoadSong()
@@ -95,6 +101,8 @@ public partial class MainWindowViewModel : ObservableObject
         _playback = Song.Midi.GetPlayback(_outputDevice);
         _playback.NoteCallback = ChannelMuteFilter;
         _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
+        _playback.Loop = true;
+        
     }
 
     [RelayCommand]
