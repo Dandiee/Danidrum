@@ -125,8 +125,6 @@ public partial class NoteHighwayControl
             Grid.SetRow(laneControl, i + 1);
             LanesGrid.Children.Add(laneControl);
 
-            
-
             var titleHost = new ContentControl
             {
                 Content = lane,

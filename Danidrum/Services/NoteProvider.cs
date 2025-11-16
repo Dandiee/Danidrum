@@ -173,12 +173,12 @@ public partial class ChunkContext : ObservableObject
         ChannelId = notes[0].Channel;
         Name = trackChunk.Events.OfType<SequenceTrackNameEvent>().FirstOrDefault()?.Text ?? "Unknown Track";
         InstrumentName = string.Join(", ", trackChunk.Events.OfType<InstrumentNameEvent>().Select(e => e.Text));
-        
-        IsLikelyDrumTrack = DrumKeywords.Any(key => Name.Contains(key, StringComparison.OrdinalIgnoreCase) 
+
+        IsLikelyDrumTrack = DrumKeywords.Any(key => Name.Contains(key, StringComparison.OrdinalIgnoreCase)
                                                     || InstrumentName.Contains(key, StringComparison.OrdinalIgnoreCase));
 
         var notesByNumbers = notes.GroupBy(e => useReduction
-            ? (int)Articulation.GetKitArticulation(e.NoteNumber) 
+            ? (int)Articulation.GetKitArticulation(e.NoteNumber)
             : e.NoteNumber);
 
         //Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList())).ToList();
@@ -196,15 +196,20 @@ public partial class ChunkContext : ObservableObject
 
         lane = null;
         return false;
-    } 
+    }
 }
+
+
 
 public class LaneContext
 {
+    public const double PerfectNoteWithMs = 150;
+    public const double MinimumNoteMarginMs = 15;
+
     public ChunkContext Chunk { get; }
     public int LaneId { get; }
     public string Name { get; }
-    public IReadOnlyList<NoteContext> Notes {get;}
+    public IReadOnlyList<NoteContext> Notes { get; }
     public EventHandler StateChanged { get; set; }
     public EventHandler<InputArg> InputReceived { get; set; }
     public KitArticulation KitArticulation { get; set; }
@@ -213,20 +218,59 @@ public class LaneContext
     {
         Chunk = chunk;
         LaneId = laneId;
-        Name = useReduction 
+        Name = useReduction
             ? Articulation.KitArticulationToName[(KitArticulation)LaneId]
             : Articulation.GetGmNoteName(LaneId, Chunk.ChannelId);
         KitArticulation = (KitArticulation)LaneId;
         Notes = notes.Select(note => new NoteContext(this, note)).ToList();
+
+        SetNoteWidths();
+    }
+
+    private void SetNoteWidths()
+    {
+        const double idealHalfWidth = PerfectNoteWithMs / 2.0;
+
+        for (var i = 0; i < Notes.Count; i++)
+        {
+            var note = Notes[i];
+
+            var maxHalfWidth = idealHalfWidth;
+
+            if (i > 0)
+            {
+                note.Previous = Notes[i - 1];
+                var distanceMs = note.StartTimeMs - note.Previous.StartTimeMs;
+                var halfWidthFromPreviousConstraint = (distanceMs - MinimumNoteMarginMs) / 2.0;
+                maxHalfWidth = Math.Min(maxHalfWidth, halfWidthFromPreviousConstraint);
+            }
+
+            if (i < Notes.Count - 1)
+            {
+                note.Next = Notes[i + 1];
+                var distanceMs = note.Next.StartTimeMs - note.StartTimeMs;
+                var halfWidthFromNextConstraint = (distanceMs - MinimumNoteMarginMs) / 2.0;
+                maxHalfWidth = Math.Min(maxHalfWidth, halfWidthFromNextConstraint);
+            }
+
+            maxHalfWidth = Math.Max(0, maxHalfWidth);
+            note.NoteWidthMs = 2.0 * maxHalfWidth;
+
+            note.NoteRectStartMs = note.StartTimeMs - maxHalfWidth;
+        }
     }
 }
 
 public class NoteContext : ITimedObject
 {
+    public double NoteWidthMs { get; set; }
+    public double NoteRectStartMs { get; set; }
     public Note Note { get; }
     public LaneContext Lane { get; }
     public double StartTimeMs { get; }
     public double DurationMs { get; }
+    public NoteContext? Previous { get; set; }
+    public NoteContext? Next { get; set; }
 
     public NoteContext(LaneContext lane, Note note)
     {

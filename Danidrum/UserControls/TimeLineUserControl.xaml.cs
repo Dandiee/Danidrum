@@ -1,7 +1,10 @@
 ﻿
 using Danidrum.Services;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace Danidrum.UserControls;
@@ -11,6 +14,7 @@ public partial class TimeLineUserControl
     {
         InitializeComponent();
     }
+
 
     public static readonly DependencyProperty CurrentTimeMsProperty = DependencyProperty.Register(nameof(CurrentTimeMs), typeof(double), typeof(TimeLineUserControl), new PropertyMetadata(0d, OnPropertyChanged));
     public double CurrentTimeMs
@@ -185,11 +189,6 @@ public partial class TimeLineUserControl
             }
         }
 
-        if (RangeStartMs >= RangeEndMs)
-        {
-
-        }
-
         CurrentTimeMs = Math.Clamp(CurrentTimeMs, RangeStartMs, RangeEndMs);
 
         _isSeeking = false;
@@ -215,5 +214,10 @@ public partial class TimeLineUserControl
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
         //RangeStart = _ RangeStartMs
+    }
+
+    private void LanesList_OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+
     }
 }

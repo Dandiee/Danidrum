@@ -11,56 +11,60 @@
              MouseLeave="OnSeekCompleted"
              SizeChanged="OnSizeChanged"
              MouseLeftButtonUp="OnSeekCompleted">
-    <Border BorderBrush="{DynamicResource MaterialDesign.Brush.Primary}" BorderThickness="1" 
-            Background="{DynamicResource MaterialDesign.Brush.Primary.Dark}">
+
+    <Border Background="{DynamicResource MaterialDesign.Brush.Primary.Dark}">
+
         <Border VerticalAlignment="Center">
             <Grid x:Name="TimeLineContainer">
                 
                 <local:MeasuresControl Song="{Binding Song}" 
-                                       MeasureBrush="{DynamicResource MaterialDesign.Brush.Primary}" MeasureThickness="0.5"/>
+                                       MeasureBrush="{DynamicResource MaterialDesign.Brush.Primary}" 
+                                       MeasureThickness="0.5"/>
 
-                <ItemsControl ItemsSource="{Binding SelectedChunk.Lanes}" Margin="0 10">
+                <ItemsControl ItemsSource="{Binding SelectedChunk.Lanes}" x:Name="LanesList" Padding="0 10" VerticalAlignment="Top">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <local:NoteLaneControl Height="10" />
+                            <local:NoteLaneControl Height="7" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
                 <Border BorderThickness="0 0 1 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
-                        Height="{Binding ActualHeight, ElementName=TimeLineContainer}"
+                        Height="{Binding ActualHeight, ElementName=LanesList}"
                         IsHitTestVisible="False"
-                        Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}" Width="{Binding RangeStart, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" 
-                        Opacity="0.5"
+                        Background="{DynamicResource MaterialDesignBackground}"
+                        Width="{Binding RangeStart, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" 
+                        Opacity="0.7"
                         HorizontalAlignment="Left"/>
 
 
                 <Border BorderThickness="0 0 1 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
-                        Height="{Binding ActualHeight, ElementName=TimeLineContainer}"
+                        Height="{Binding ActualHeight, ElementName=LanesList}"
                         IsHitTestVisible="False"
-                        Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}" Width="{Binding RangeEnd, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" 
-                        Opacity="0.5"
+                        Background="{DynamicResource MaterialDesignBackground }" 
+                        Width="{Binding RangeEnd, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" 
+                        Opacity="0.7"
                         HorizontalAlignment="Right"/>
 
                 <Canvas x:Name="PositionCanvas">
 
                     <Thumb x:Name="StartRangeThumb"
                            HorizontalAlignment="Left"
-                           Width="10" 
-                           Background="{DynamicResource MaterialDesign.Brush.Primary.Light}"
+                           Width="6" 
+                           Background="{DynamicResource MaterialDesignValidationErrorBrush}"
                            DragDelta="OnRangeDragDelta"
-                           Height="{Binding Path=ActualHeight, ElementName=TimeLineContainer}"
-                           Margin="-5 0 0 0"
+                           Height="{Binding Path=ActualHeight, ElementName=LanesList}"
+                           Margin="-3 0 0 0"
                            Canvas.Left="{Binding RangeStart, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Mode=TwoWay}"/>
 
 
                     <Thumb x:Name="EndRangeThumb"
                            HorizontalAlignment="Left"
-                           Width="10" 
-                           Background="{DynamicResource MaterialDesign.Brush.Primary.Light}"
+                           Width="6" 
+                           Background="{DynamicResource MaterialDesignValidationErrorBrush}"
                            DragDelta="OnRangeDragDelta"
-                           Height="{Binding Path=ActualHeight, ElementName=TimeLineContainer}"
-                           Margin="-5 0 0 0"
+                           Height="{Binding Path=ActualHeight, ElementName=LanesList}"
+                           Margin="-3 0 0 0"
                            Canvas.Right="{Binding RangeEnd, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Mode=TwoWay}"/>
 
                    
@@ -68,23 +72,24 @@
                 </Canvas>
 
 
-                <Line Stroke="Red" 
+                <Line Stroke="{DynamicResource MaterialDesign.Brush.ValidationError}" 
                       X1="{Binding RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Path=CurrentPosition}"
                       X2="{Binding RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}, Path=CurrentPosition}"
                       Y1="0"
-                      Y2="{Binding ElementName=TimeLineContainer, Path=ActualHeight }"/>
+                      Y2="{Binding ElementName=LanesList, Path=ActualHeight }"/>
 
                 <Border BorderThickness="0 0 1 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
                         IsHitTestVisible="False"
-                        Background="Transparent" Width="{Binding LeftMaskWidth, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" HorizontalAlignment="Left">
-                    <Grid Opacity="0.5" Background="Black" />
-                </Border>
+                        Width="{Binding LeftMaskWidth, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" 
+                        Opacity="0.35" Background="Black"
+                        HorizontalAlignment="Left"/>
 
-                <Border BorderThickness="1 0 0 0" BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
+                <Border BorderThickness="1 0 0 0" 
+                        BorderBrush="{DynamicResource MaterialDesign.Brush.Secondary.Light}" 
                         IsHitTestVisible="False"
-                        Background="Transparent" Width="{Binding RightMaskWidth, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" HorizontalAlignment="Right">
-                    <Grid Opacity="0.5" Background="Black" />
-                </Border>
+                        Width="{Binding RightMaskWidth, RelativeSource={RelativeSource AncestorType=local:TimeLineUserControl}}" 
+                        Opacity="0.35" Background="Black" 
+                        HorizontalAlignment="Right"/>
 
             </Grid>
         </Border>

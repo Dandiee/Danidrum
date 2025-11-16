@@ -16,21 +16,14 @@
 
 
 
-</ResourceDictionary.MergedDictionaries>
+            </ResourceDictionary.MergedDictionaries>
 
-            <Style TargetType="{x:Type Button}" 
-                   BasedOn="{StaticResource MaterialDesignRaisedButton}" />
+            <SolidColorBrush x:Key="MaterialDesignBackground" Color="#0C0C0C" />
+            <SolidColorBrush x:Key="MaterialDesignPaper" Color="#161616" />
+            <SolidColorBrush x:Key="MaterialDesignToolTipBackground" Color="#222222" />
+            <SolidColorBrush x:Key="MaterialDesign.Brush.SurfaceContainerLowest" Color="#0C0C0C" />
+            <SolidColorBrush x:Key="MaterialDesign.Brush.SurfaceContainerLow" Color="#161616" />
 
-            <Style TargetType="{x:Type TextBox}" 
-                   BasedOn="{StaticResource MaterialDesignOutlinedTextBox}" />
-
-            <Style TargetType="{x:Type ListBox}" 
-                   BasedOn="{StaticResource MaterialDesignListBox}" />
-
-            <Style TargetType="{x:Type ComboBox}" 
-                   BasedOn="{StaticResource MaterialDesignComboBox}" />
-
-            <local:BoolToPlayPauseIconConverter x:Key="BoolToPlayPauseIconConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

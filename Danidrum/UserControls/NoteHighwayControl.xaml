@@ -14,14 +14,15 @@
         <local:MidLineConverter x:Key="MidLineConverter"/>
 
         <DataTemplate x:Key="LaneNameTemplate" DataType="{x:Type services:LaneContext}">
-            <Border BorderBrush="{DynamicResource MaterialDesign.Brush.OutlineVariant}"
+            <Border BorderBrush="{DynamicResource MaterialDesign.Brush.Primary}"
                     VerticalAlignment="Stretch"
                     HorizontalAlignment="Stretch"
-                    Background="{DynamicResource MaterialDesign.Brush.Primary}"
-                    CornerRadius="0 10 10 0"
-                    BorderThickness="0,0,0,2">
-                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="10 0 0 0"
+                    BorderThickness="0 1 1 0"
+                    Background="{DynamicResource MaterialDesign.Brush.Primary.Dark}"
+                    >
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="10 0"
                            FontWeight="Bold"
+                           HorizontalAlignment="Center"
                            TextTrimming="CharacterEllipsis"
                            Style="{StaticResource MaterialDesignBody2TextBlock}"/>
                 <!--<danidrum:DrumIcon Articulation="{Binding KitArticulation}" VerticalAlignment="Center" Margin="10 0 0 0"/>-->
@@ -30,7 +31,7 @@
     </UserControl.Resources>
 
 
-    <Grid Background="{DynamicResource MaterialDesign.Brush.Primary.Dark}">
+    <Grid Background="{DynamicResource MaterialDesignToolTipBackground}">
 
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="120"/>

@@ -81,7 +81,7 @@ public partial class MainWindowViewModel : ObservableObject
     private void LoadSong()
     {
         IsPlaying = false;
-        Song = new SongContext("nirv.mid", IsReduced);
+        Song = new SongContext("test.mid", IsReduced);
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
         MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
