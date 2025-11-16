@@ -1,0 +1,19 @@
+﻿<UserControl x:Class="Danidrum.DrumIcon"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:danidrum="clr-namespace:Danidrum"
+             mc:Ignorable="d" 
+             x:Name="DrumIconControl"
+             d:DataContext="{d:DesignInstance IsDesignTimeCreatable=False, Type=danidrum:DrumIconData}">
+    <Grid>
+        <!--<Viewbox Stretch="Uniform">
+            <Canvas Width="80" Height="80">
+                <Path Data="{Binding ContextData}" Fill="Gray"/>
+                <Path Data="{Binding AccentData}" Fill="{DynamicResource MaterialDesign.Brush.Primary}"/>
+            </Canvas>
+        </Viewbox>-->
+        <TextBlock Text="{Binding KitArticulation}"/>
+    </Grid>
+</UserControl>
