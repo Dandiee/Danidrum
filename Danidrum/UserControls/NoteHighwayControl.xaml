@@ -60,5 +60,7 @@
             <Border Width="1" Background="{DynamicResource MaterialDesign.Brush.Secondary.Light}" HorizontalAlignment="Center" VerticalAlignment="Stretch" IsHitTestVisible="False" />
 
         </Grid>
+
+        <Grid Grid.ColumnSpan="2" Background="Black" Height="30" VerticalAlignment="Top" Opacity="0.4"></Grid>
     </Grid>
 </UserControl>
