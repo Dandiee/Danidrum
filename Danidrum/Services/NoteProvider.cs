@@ -6,6 +6,7 @@ using System.Security.Permissions;
 using System.Threading.Channels;
 using System.Windows.Forms;
 using static Danidrum.MainWindowViewModel;
+using static System.Windows.Forms.AxHost;
 using DryWetMidiFile = Melanchall.DryWetMidi.Core.MidiFile;
 
 namespace Danidrum.Services;
@@ -267,8 +268,19 @@ public class LaneContext
     }
 }
 
+public enum NoteState
+{
+    Pending,
+    Hit,
+    Rushed,
+    Dragged,
+    Missed
+}
+
 public class NoteContext : ITimedObject
 {
+    public NoteState State { get; set; }
+    public double? HitOffsetMs { get; set; }
     public double NoteWidthMs { get; set; }
     public double NoteRectStartMs { get; set; }
     public Note Note { get; }
@@ -280,6 +292,8 @@ public class NoteContext : ITimedObject
 
     public NoteContext(LaneContext lane, Note note)
     {
+        State = NoteState.Pending;
+
         Note = note;
         Lane = lane;
 

@@ -30,6 +30,10 @@
             <b:InvokeCommandAction Command="{Binding TogglePlayPauseCommand}" />
         </b:KeyTrigger>
 
+        <b:KeyTrigger Key="Enter" FiredOn="KeyDown" ActiveOnFocus="True">
+            <b:InvokeCommandAction Command="{Binding EmulateSnareHitCommand}" />
+        </b:KeyTrigger>
+
         <b:KeyTrigger Key="O" Modifiers="Control" FiredOn="KeyUp" ActiveOnFocus="False">
             <b:InvokeCommandAction Command="{Binding OpenCommand}" />
         </b:KeyTrigger>

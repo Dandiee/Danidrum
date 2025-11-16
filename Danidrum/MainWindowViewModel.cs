@@ -194,6 +194,15 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedOutputDevice = OutputDevices.FirstOrDefault();
     }
 
+    [RelayCommand]
+    private void EmulateSnareHit()
+    {
+        var snareLane = SelectedChunk.Lanes.FirstOrDefault(e => e.KitArticulation == KitArticulation.Snare);
+        if (snareLane == null) return;
+
+        snareLane.InputReceived?.Invoke(this, new InputArg(_currentTimeMs));
+    }
+
     partial void OnSelectedInputDeviceChanged(string value)
     {
         if (_inputDevice != null)
@@ -258,18 +267,21 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (e.Event is NoteOnEvent noteOn)
         {
+            var articulation = Articulation.Td07NoteToArticulation[noteOn.NoteNumber];
+            var kitArticulation = Articulation.ArticulationToKitArticulation[articulation];
+
             var laneId = Song.IsReduced
                 ? (int)Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[noteOn.NoteNumber]]
                 : noteOn.NoteNumber;
 
-            if (SelectedChunk.TryGetLane(laneId, out var lane))
+            if (SelectedChunk.TryGetLane((int)articulation, out var lane))
             {
-                lane.InputReceived?.Invoke(this, new InputArg(noteOn.NoteNumber, _currentTimeMs));
+                lane.InputReceived?.Invoke(this, new InputArg(_currentTimeMs));
             }
 
             Debug.WriteLine($"{noteOn.NoteNumber}, {noteOn.Channel}, {noteOn.EventType}");
         }
     }
 
-    public record InputArg(SevenBitNumber NoteNumber, double TimeInMs);
+    public record InputArg(double TimeInMs);
 }
