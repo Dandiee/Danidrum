@@ -10,6 +10,7 @@ using System.Windows.Media;
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Microsoft.Win32;
+using NAudio.CoreAudioApi;
 using NAudio.Wave.Asio;
 
 namespace Danidrum;
@@ -25,8 +26,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isPlaying;
     [ObservableProperty] private DoubleCollection _measureStartTimesInMs;
     [ObservableProperty] private IReadOnlyList<string> _inputDevices;
-    [ObservableProperty] private IReadOnlyList<string> _outputDevices;
-    [ObservableProperty] private string _selectedOutputDevice;
+    [ObservableProperty] private IReadOnlyList<OutputAudioDevice> _outputDevices;
+    [ObservableProperty] private OutputAudioDevice _selectedOutputDevice;
     [ObservableProperty] private string _selectedInputDevice;
     [ObservableProperty] private bool _isReduced = true;
     [ObservableProperty] private double _visibleAreaMs;
@@ -194,10 +195,10 @@ public partial class MainWindowViewModel : ObservableObject
     private void RefreshDevices()
     {
         InputDevices = InputDevice.GetAll().Select(e => e.Name).ToList();
-        OutputDevices = OutputDevice.GetAll().Select(e => e.Name).ToList();
+        OutputDevices = Audio.GetOutputDevices();
 
         SelectedInputDevice = InputDevices.FirstOrDefault();
-        SelectedOutputDevice = OutputDevices.FirstOrDefault();
+        SelectedOutputDevice = OutputDevices.FirstOrDefault(e => e.IsDefault);
     }
 
     [RelayCommand]
@@ -226,7 +227,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedOutputDeviceChanged(string value)
+    partial void OnSelectedOutputDeviceChanged(OutputAudioDevice value)
     {
         IsPlaying = false;
 
@@ -238,18 +239,28 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (value != null)
         {
-            
 
-
-            var asioDriver = AsioDriver.GetAsioDriverNames().FirstOrDefault();
-            if (false && !string.IsNullOrEmpty(asioDriver))
+            if (value.DeviceType == OutputDeviceType.Asio)
             {
-                _outputDevice = new AsioSoundFontSynthDevice(asioDriver, "GeneralUser-GS.sf2");
+                try
+                {
+                    _outputDevice = new AsioSoundFontSynthDevice(value.DeviceName, "GeneralUser-GS.sf2");
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("Failed to create audio device :(");
+                    SelectedOutputDevice = null;
+                }
+            }
+            else if (value.DeviceType == OutputDeviceType.Wasapi)
+            {
+                _outputDevice = new StandardSoundFontSynthDevice("GeneralUser-GS.sf2", value.Device as MMDevice);
             }
             else
             {
-                _outputDevice = OutputDevice.GetByName(value);
+                _outputDevice = OutputDevice.GetByName(value.DeviceName);
             }
+
 
             if (_playback != null)
             {

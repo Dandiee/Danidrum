@@ -1,6 +1,7 @@
 ﻿using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Multimedia;
 using MeltySynth;
+using NAudio.CoreAudioApi;
 using NAudio.Dsp;
 using NAudio.Wave;
 using NAudio.Wave.Asio;
@@ -8,6 +9,77 @@ using NAudio.Wave.SampleProviders;
 using System;
 
 namespace Danidrum;
+
+public enum OutputDeviceType
+{
+    Wasapi,
+    Asio,
+    Midi
+}
+
+public record OutputAudioDevice(string DeviceName, string FriendlyName, OutputDeviceType DeviceType, bool IsDefault, object Device);
+
+public static class Audio
+{
+    public static IReadOnlyList<OutputAudioDevice> GetOutputDevices()
+    {
+        var asioDrivers = AsioDriver.GetAsioDriverNames().Select(AsioDriver.GetAsioDriverByName);
+        var asioDevices = asioDrivers.Select(driver => new OutputAudioDevice(driver.GetDriverName(), $"[ASIO] {driver.GetDriverName()}", OutputDeviceType.Asio, false, null));
+        
+        using var enumerator = new MMDeviceEnumerator();
+        var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        var standardEndpoints = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+        var standardDevices = standardEndpoints.Select(end => new OutputAudioDevice(end.ID, $"[WASAPI] {end.FriendlyName}", OutputDeviceType.Wasapi, defaultDevice.ID == end.ID, end));
+
+
+        var midiDevices = OutputDevice.GetAll().Select(midi => new OutputAudioDevice(midi.Name, $"[MIDI] {midi.Name}", OutputDeviceType.Midi, false, null));
+        
+        return asioDevices.Concat(standardDevices).Concat(midiDevices).ToList();
+    }
+}
+
+public class StandardSoundFontSynthDevice : IOutputDevice
+{
+    private readonly WasapiOut _output; // Using WasapiOut for standard audio
+    private readonly MeltySynthSampleProvider _synthProvider;
+
+    public StandardSoundFontSynthDevice(string soundFontPath, MMDevice device)
+    {
+        // 1. Define your sample rate
+
+        int sampleRate = 44100;
+
+        // 2. Create the synth provider
+        _synthProvider = new MeltySynthSampleProvider(soundFontPath, sampleRate);
+
+        // 3. Initialize WasapiOut (the non-ASIO driver)
+        // We use "Shared" mode so it can play nicely with other Windows sounds.
+        _output = new WasapiOut(device, AudioClientShareMode.Shared, true, 20); // 20ms latency
+
+        _output.Init(_synthProvider);
+        _output.Play();
+    }
+
+    public string Name => "StandardSoundFontSynthDevice";
+
+    public void PrepareForEventsSending() { }
+
+    public void SendEvent(MidiEvent midiEvent)
+    {
+        // Pass the MIDI event directly to the synth
+        _synthProvider.ProcessMidiEvent(midiEvent);
+
+        EventSent?.Invoke(this, new MidiEventSentEventArgs(midiEvent));
+    }
+
+    public event EventHandler<MidiEventSentEventArgs>? EventSent;
+
+    public void Dispose()
+    {
+        _output?.Stop();
+        _output?.Dispose();
+    }
+}
 
 public class AsioSoundFontSynthDevice : IOutputDevice
 {
