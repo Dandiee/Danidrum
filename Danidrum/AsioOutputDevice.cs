@@ -2,11 +2,8 @@
 using Melanchall.DryWetMidi.Multimedia;
 using MeltySynth;
 using NAudio.CoreAudioApi;
-using NAudio.Dsp;
 using NAudio.Wave;
 using NAudio.Wave.Asio;
-using NAudio.Wave.SampleProviders;
-using System;
 
 namespace Danidrum;
 

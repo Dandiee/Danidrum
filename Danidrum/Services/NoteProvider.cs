@@ -138,7 +138,7 @@ public sealed class ChannelContext
     public SongContext Song { get; }
     public FourBitNumber ChannelId { get; }
 
-    public IReadOnlyDictionary<int, LaneContext> LanesByNote { get; }
+    public IReadOnlyDictionary<int, List<LaneContext>> LanesByNote { get; }
 
 
     public ChannelContext(SongContext song, IGrouping<FourBitNumber, TrackChunk> channelGroup, bool useReduction)
@@ -149,7 +149,7 @@ public sealed class ChannelContext
         LanesByNote = Chunks
             .SelectMany(chunk => chunk.Lanes)
             .GroupBy(e => e.LaneId)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.First());
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.ToList());
     }
 }
 

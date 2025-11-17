@@ -22,7 +22,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _currentMidiFile;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private ChunkContext _selectedChunk;
-    
+
     [ObservableProperty] private bool _isPlaying;
     [ObservableProperty] private DoubleCollection _measureStartTimesInMs;
     [ObservableProperty] private IReadOnlyList<string> _inputDevices;
@@ -279,17 +279,22 @@ public partial class MainWindowViewModel : ObservableObject
 
             var enu = Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[note.NoteNumber]];
 
-            if (!channel.LanesByNote.TryGetValue((int)enu, out var lane)) continue;
-            if (!lane.NotesByStartTimeTick.TryGetValue(note.Time, out var relatedNotes)) continue;
+            if (!channel.LanesByNote.TryGetValue((int)enu, out var lanes)) continue;
 
-            foreach (var relatedNote in relatedNotes)
+            foreach (var lane in lanes)
             {
-                if (relatedNote.State == NoteState.Pending)
+                if (lane.NotesByStartTimeTick.TryGetValue(note.Time, out var relatedNotes))
                 {
-                    relatedNote.State = NoteState.Missed;
-                }
+                    foreach (var relatedNote in relatedNotes)
+                    {
+                        if (relatedNote.State == NoteState.Pending)
+                        {
+                            relatedNote.State = NoteState.Missed;
+                        }
 
-                lane.StateChanged.Invoke(this, new StateChangeEventArgs(false));
+                        lane.StateChanged.Invoke(this, new StateChangeEventArgs(false));
+                    }
+                }
             }
         }
     }
