@@ -10,6 +10,7 @@ using System.Windows.Media;
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Microsoft.Win32;
+using NAudio.CoreAudioApi;
 using NAudio.Wave.Asio;
 
 namespace Danidrum;
@@ -25,8 +26,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isPlaying;
     [ObservableProperty] private DoubleCollection _measureStartTimesInMs;
     [ObservableProperty] private IReadOnlyList<string> _inputDevices;
-    [ObservableProperty] private IReadOnlyList<string> _outputDevices;
-    [ObservableProperty] private string _selectedOutputDevice;
+    [ObservableProperty] private IReadOnlyList<OutputAudioDevice> _outputDevices;
+    [ObservableProperty] private OutputAudioDevice _selectedOutputDevice;
     [ObservableProperty] private string _selectedInputDevice;
     [ObservableProperty] private bool _isReduced = true;
     [ObservableProperty] private double _visibleAreaMs;
@@ -66,10 +67,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (value)
         {
-            foreach (var lane in Song.Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
-            {
-                lane.StateChanged?.Invoke(this, new StateChangeEventArgs(true));
-            }
+            Song.Clean();
 
             _playback.Start();
         }
@@ -97,11 +95,12 @@ public partial class MainWindowViewModel : ObservableObject
     private void LoadSong(string path)
     {
         IsPlaying = false;
+        _mutedChannels.Clear();
         Song = new SongContext(path, IsReduced);
         Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
         MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
-        SelectedChunk = Chunks.SingleOrDefault(e => e.ChannelId == 9 && e.IsLikelyDrumTrack) ??
+        SelectedChunk = Chunks.FirstOrDefault(e => e.ChannelId == 9 && e.IsLikelyDrumTrack) ??
                         Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
         CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
@@ -109,6 +108,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (_playback != null)
         {
             _playback.NotesPlaybackFinished -= PlaybackOnNotesPlaybackFinished;
+            _playback.RepeatStarted -= PlaybackOnRepeatStarted;
             _playback.NoteCallback = null;
             _playback.Dispose();
             _playback = null;
@@ -118,6 +118,12 @@ public partial class MainWindowViewModel : ObservableObject
         _playback.NoteCallback = ChannelMuteFilter;
         _playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
         _playback.Loop = true;
+        _playback.RepeatStarted += PlaybackOnRepeatStarted;
+    }
+
+    private void PlaybackOnRepeatStarted(object? sender, EventArgs e)
+    {
+        Song.Clean();
     }
 
     [RelayCommand]
@@ -189,10 +195,10 @@ public partial class MainWindowViewModel : ObservableObject
     private void RefreshDevices()
     {
         InputDevices = InputDevice.GetAll().Select(e => e.Name).ToList();
-        OutputDevices = OutputDevice.GetAll().Select(e => e.Name).ToList();
+        OutputDevices = Audio.GetOutputDevices();
 
         SelectedInputDevice = InputDevices.FirstOrDefault();
-        SelectedOutputDevice = OutputDevices.FirstOrDefault();
+        SelectedOutputDevice = OutputDevices.FirstOrDefault(e => e.IsDefault);
     }
 
     [RelayCommand]
@@ -221,7 +227,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedOutputDeviceChanged(string value)
+    partial void OnSelectedOutputDeviceChanged(OutputAudioDevice value)
     {
         IsPlaying = false;
 
@@ -233,15 +239,29 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (value != null)
         {
-            //_outputDevice = OutputDevice.GetByName(value);
 
-            //_outputDevice = new AsioPolyphonicSynthDevice(AsioDriver.GetAsioDriverNames()[0]);
+            if (value.DeviceType == OutputDeviceType.Asio)
+            {
+                try
+                {
+                    _outputDevice = new AsioSoundFontSynthDevice(value.DeviceName, "GeneralUser-GS.sf2");
+                }
+                catch (Exception e)
+                {
+                    MessageBox.Show("Failed to create audio device :(");
+                    SelectedOutputDevice = null;
+                }
+            }
+            else if (value.DeviceType == OutputDeviceType.Wasapi)
+            {
+                _outputDevice = new StandardSoundFontSynthDevice("GeneralUser-GS.sf2", value.Device as MMDevice);
+            }
+            else
+            {
+                _outputDevice = OutputDevice.GetByName(value.DeviceName);
+            }
 
-            string soundFontPath = "GeneralUser-GS.sf2";
-            string asioDriverName = AsioDriver.GetAsioDriverNames()[0];
 
-            // Use this as your OutputDevice for DryWetMidi's Playback
-            _outputDevice = new AsioSoundFontSynthDevice(asioDriverName, soundFontPath);
             if (_playback != null)
             {
                 _playback.OutputDevice = _outputDevice;
@@ -253,13 +273,23 @@ public partial class MainWindowViewModel : ObservableObject
     {
         foreach (var note in e.Notes)
         {
-            var ctx = Song.GetNoteContexts(note);
-            if (ctx != null && ctx.Count == 1)
+            if (note.Channel != SelectedChunk.ChannelId) continue;
+
+            if (!Song.ChannelsById.TryGetValue(note.Channel, out var channel)) continue;
+
+            var enu = Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[note.NoteNumber]];
+
+            if (!channel.LanesByNote.TryGetValue((int)enu, out var lane)) continue;
+            if (!lane.NotesByStartTimeTick.TryGetValue(note.Time, out var relatedNotes)) continue;
+
+            foreach (var relatedNote in relatedNotes)
             {
-                if (SelectedChunk.ChannelId == ctx[0].Lane.Chunk.ChannelId)
+                if (relatedNote.State == NoteState.Pending)
                 {
-                    ctx[0].Lane.StateChanged?.Invoke(this, new StateChangeEventArgs(false));
+                    relatedNote.State = NoteState.Missed;
                 }
+
+                lane.StateChanged.Invoke(this, new StateChangeEventArgs(false));
             }
         }
     }

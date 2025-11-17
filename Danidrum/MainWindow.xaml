@@ -165,11 +165,13 @@
                     <Button Style="{StaticResource MaterialDesignFloatingActionLightButton}" DockPanel.Dock="Right"
                             Height="20" Width="20" Margin="5 0 0 0"
                             Command="{Binding RefreshDevicesCommand}"
+                            IsEnabled="{Binding IsPlaying, Converter={StaticResource BoolNegationConverter}}"
                             HorizontalAlignment="Right" VerticalAlignment="Center">
                         <materialDesign:PackIcon Kind="Refresh" />
                     </Button>
 
                     <ComboBox ItemsSource="{Binding InputDevices}" 
+                              IsEnabled="{Binding IsPlaying, Converter={StaticResource BoolNegationConverter}}"
                               materialDesign:HintAssist.Hint="No Input device"
                               SelectedItem="{Binding SelectedInputDevice}" Margin="10 0"/>
                 </DockPanel>
@@ -179,13 +181,15 @@
                     <Button Style="{StaticResource MaterialDesignFloatingActionLightButton}" DockPanel.Dock="Right"
                             Command="{Binding RefreshDevicesCommand}"
                             Height="20" Width="20" Margin="5 0 0 0"
+                            IsEnabled="{Binding IsPlaying, Converter={StaticResource BoolNegationConverter}}"
                             HorizontalAlignment="Right" VerticalAlignment="Center">
                         <materialDesign:PackIcon Kind="Refresh" />
                     </Button>
 
                     <ComboBox ItemsSource="{Binding OutputDevices}"
-                              materialDesign:HintAssist.Hint="Output Device"
-                              SelectedItem="{Binding SelectedOutputDevice}" Margin="10 0"/>
+                              IsEnabled="{Binding IsPlaying, Converter={StaticResource BoolNegationConverter}}"
+                              materialDesign:HintAssist.Hint="Output Device" DisplayMemberPath="FriendlyName"
+                              SelectedItem="{Binding SelectedOutputDevice, Mode=TwoWay}" Margin="10 0"/>
                 </DockPanel>
 
                   

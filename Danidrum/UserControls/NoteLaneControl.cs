@@ -120,7 +120,7 @@ public class NoteLaneControl : FrameworkElement
         var laneHeight = _lane == null ? Height : (Parent as Grid).ActualHeight / lane.Chunk.Lanes.Count;
 
         var margin = _lane != null
-            ? 10
+            ? 22
             : 1;
 
         var midLane = laneHeight / 2;
@@ -133,7 +133,7 @@ public class NoteLaneControl : FrameworkElement
         }
 
         var pixelPerMs = _owner?.PixelPerMs ?? ActualWidth / lane.Chunk.Channel.Song.LengthMs;
-        double cornerRadius = _lane == null ? 1 : 4;
+        double cornerRadius = _lane == null ? 1 : 2;
 
         
 

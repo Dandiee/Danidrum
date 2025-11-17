@@ -24,6 +24,8 @@
             <SolidColorBrush x:Key="MaterialDesign.Brush.SurfaceContainerLowest" Color="#0C0C0C" />
             <SolidColorBrush x:Key="MaterialDesign.Brush.SurfaceContainerLow" Color="#161616" />
 
+            <local:BoolNegationConverter x:Key="BoolNegationConverter"/>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>
