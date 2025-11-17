@@ -274,6 +274,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OnMidiEvent(object sender, MidiEventReceivedEventArgs e)
     {
+        if (!IsPlaying) return;
+
         if (e.Event is NoteOnEvent noteOn)
         {
             var articulation = Articulation.Td07NoteToArticulation[noteOn.NoteNumber];
