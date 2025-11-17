@@ -17,7 +17,15 @@ public enum OutputDeviceType
     Midi
 }
 
-public record OutputAudioDevice(string DeviceName, string FriendlyName, OutputDeviceType DeviceType, bool IsDefault, object Device);
+public record OutputAudioDevice(
+    string DeviceName,
+    string FriendlyName,
+    OutputDeviceType DeviceType,
+    bool IsDefault,
+    object Device)
+{
+    public override string ToString() => FriendlyName;
+}
 
 public static class Audio
 {
