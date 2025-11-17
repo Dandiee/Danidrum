@@ -31,8 +31,8 @@ public static class Audio
 {
     public static IReadOnlyList<OutputAudioDevice> GetOutputDevices()
     {
-        var asioDrivers = AsioDriver.GetAsioDriverNames().Select(AsioDriver.GetAsioDriverByName);
-        var asioDevices = asioDrivers.Select(driver => new OutputAudioDevice(driver.GetDriverName(), $"[ASIO] {driver.GetDriverName()}", OutputDeviceType.Asio, false, null));
+        var asioDrivers = AsioDriver.GetAsioDriverNames();
+        var asioDevices = asioDrivers.Select(driverName => new OutputAudioDevice(driverName, $"[ASIO] {driverName}", OutputDeviceType.Asio, false, null));
         
         using var enumerator = new MMDeviceEnumerator();
         var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
@@ -96,7 +96,6 @@ public class AsioSoundFontSynthDevice : IOutputDevice
 
     public AsioSoundFontSynthDevice(string asioDriverName, string soundFontPath)
     {
-        var driver = AsioDriver.GetAsioDriverByName(asioDriverName);
         //var sampleRate = driver.GetSampleRate();
         // 1. Create the synth provider
         _synthProvider = new MeltySynthSampleProvider(soundFontPath, 44100);
