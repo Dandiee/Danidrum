@@ -249,7 +249,7 @@ public class LaneContext
         {
             var note = Notes[i];
 
-            var maxHalfWidth = idealHalfWidth;
+            var maxHalfWidth = idealHalfWidth * note.BeatFractionLength;
 
             if (i > 0)
             {
@@ -294,6 +294,7 @@ public class NoteContext : ITimedObject
     public LaneContext Lane { get; }
     public double StartTimeMs { get; }
     public double DurationMs { get; }
+    public double BeatFractionLength { get; }
     public NoteContext? Previous { get; set; }
     public NoteContext? Next { get; set; }
 
@@ -306,6 +307,9 @@ public class NoteContext : ITimedObject
 
         var time = note.TimeAs<MetricTimeSpan>(lane.Chunk.Channel.Song.TempoMap);
         var length = note.LengthAs<MetricTimeSpan>(lane.Chunk.Channel.Song.TempoMap);
+
+        var barBeatFraction = note.TimeAs<BarBeatFractionTimeSpan>(Lane.Chunk.Channel.Song.TempoMap);
+        BeatFractionLength = barBeatFraction.Beats;
 
         StartTimeMs = time.TotalMilliseconds;
         DurationMs = length.TotalMilliseconds;
