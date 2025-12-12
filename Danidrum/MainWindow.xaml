@@ -104,6 +104,8 @@
                                                Style="{StaticResource MaterialDesignBody2TextBlock}"
                                                Foreground="{DynamicResource MaterialDesign.Brush.OnSurfaceVariant}"
                                                TextTrimming="CharacterEllipsis"/>
+                                    
+                                    <TextBlock Text="{Binding InstrumentId}"/>
 
 
                                 </StackPanel>

@@ -43,8 +43,14 @@ public class SongContext
         Midi = DryWetMidiFile.Read(midiFilePath);
         IsReduced = useReduction;
         TempoMap = Midi.GetTempoMap();
-        var channelGroups = Midi.GetTrackChunks().GroupBy(grp => grp.Events.GetNotes().First().Channel);
-        Channels = channelGroups.Select(grp => new ChannelContext(this, grp, useReduction)).OrderBy(e => e.ChannelId).ToList();
+        IEnumerable<IGrouping<FourBitNumber, TrackChunk>> channelGroups = Midi
+            .GetTrackChunks()
+            .GroupBy(grp => ((ChannelEvent)grp.Events.FirstOrDefault(e =>e is ChannelEvent ch))?.Channel ?? FourBitNumber.MaxValue);
+
+        Channels = channelGroups
+            .Where(e => e.Key != FourBitNumber.MaxValue)
+            .Select(grp => new ChannelContext(this, grp, useReduction))
+            .OrderBy(e => e.ChannelId).ToList();
 
         //Chunks = Midi.GetTrackChunks().Select(chunk => new ChunkContext(this, chunk)).OrderBy(e => e.ChannelId).ToList();
         LengthMs = Midi.GetDuration<MetricTimeSpan>().TotalMilliseconds;
@@ -164,6 +170,7 @@ public partial class ChunkContext : ObservableObject
 
     public string Name { get; }
     public string InstrumentName { get; }
+    public int InstrumentId { get; }
     public int ChannelId { get; }
     public bool IsLikelyDrumTrack { get; }
 
@@ -175,6 +182,7 @@ public partial class ChunkContext : ObservableObject
     {
         Channel = channel;
         TrackChunk = trackChunk;
+        InstrumentId = trackChunk.Events.OfType<ProgramChangeEvent>().First().ProgramNumber;
         var notes = trackChunk.GetNotes().ToList();
         ChannelId = notes[0].Channel;
         Name = trackChunk.Events.OfType<SequenceTrackNameEvent>().FirstOrDefault()?.Text ?? "Unknown Track";
@@ -212,7 +220,7 @@ public class StateChangeEventArgs(bool cleanState) : EventArgs
 
 public class LaneContext
 {
-    public const double PerfectNoteWithMs = 75;
+    public const double PerfectWholeNoteWidthMs = 150;
     public const double MinimumNoteMarginMs = 15;
 
     public ChunkContext Chunk { get; }
@@ -243,7 +251,7 @@ public class LaneContext
 
     private void SetNoteWidths()
     {
-        const double idealHalfWidth = PerfectNoteWithMs / 2.0;
+        const double idealHalfWidth = PerfectWholeNoteWidthMs / 2.0;
 
         for (var i = 0; i < Notes.Count; i++)
         {
@@ -269,7 +277,6 @@ public class LaneContext
 
             maxHalfWidth = Math.Max(0, maxHalfWidth);
             note.NoteWidthMs = 2.0 * maxHalfWidth;
-
             note.NoteRectStartMs = note.StartTimeMs - maxHalfWidth;
         }
     }
@@ -308,7 +315,7 @@ public class NoteContext : ITimedObject
         var time = note.TimeAs<MetricTimeSpan>(lane.Chunk.Channel.Song.TempoMap);
         var length = note.LengthAs<MetricTimeSpan>(lane.Chunk.Channel.Song.TempoMap);
 
-        var barBeatFraction = note.TimeAs<BarBeatFractionTimeSpan>(Lane.Chunk.Channel.Song.TempoMap);
+        var barBeatFraction = note.LengthAs<BarBeatFractionTimeSpan>(Lane.Chunk.Channel.Song.TempoMap);
         BeatFractionLength = barBeatFraction.Beats;
 
         StartTimeMs = time.TotalMilliseconds;

@@ -124,7 +124,7 @@ public class NoteLaneControl : FrameworkElement
             : 1;
 
         var midLane = laneHeight / 2;
-        var height = Math.Min(laneHeight - (margin * 2), 60);
+        var height = Math.Max(10, Math.Min(laneHeight - (margin * 2), 60));
         var y = (laneHeight - height) / 2;
 
         if (_lane != null)
@@ -135,7 +135,9 @@ public class NoteLaneControl : FrameworkElement
         var pixelPerMs = _owner?.PixelPerMs ?? ActualWidth / lane.Chunk.Channel.Song.LengthMs;
         double cornerRadius = _lane == null ? 1 : 2;
 
-        
+        var q = lane.Notes.Where(e => e.BeatFractionLength == 0).ToList();
+
+
 
         foreach (var note in lane.Notes)
         {
