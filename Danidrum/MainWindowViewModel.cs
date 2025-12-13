@@ -7,6 +7,7 @@ using Danidrum.Services;
 using Melanchall.DryWetMidi.Interaction;
 using Melanchall.DryWetMidi.Multimedia;
 using System.Windows.Media;
+using Danidrum.AudioEngine;
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Microsoft.Win32;
@@ -70,7 +71,12 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Song.Clean();
 
-            _multiPlayback.PlayMidiFile();
+            if (_multiPlayback == null)
+            {
+                CreatePlayback();
+            }
+
+            _multiPlayback.Play();
 
             //_playback.Start();
         }
@@ -81,18 +87,18 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnRangeStartMsChanged(double value)
     {
-        //if (_playback != null)
-        //{
-        //    _playback.PlaybackStart = new MetricTimeSpan(TimeSpan.FromMilliseconds(value));
-        //}
+        if (_multiPlayback != null)
+        {
+            _multiPlayback.PlaybackStart = new MetricTimeSpan(TimeSpan.FromMilliseconds(value));
+        }
     }
 
     partial void OnRangeEndMsChanged(double value)
     {
-        //if (_playback != null)
-        //{
-        //    _playback.PlaybackEnd = new MetricTimeSpan(TimeSpan.FromMilliseconds(value));
-        //}
+        if (_multiPlayback != null)
+        {
+            _multiPlayback.PlaybackEnd = new MetricTimeSpan(TimeSpan.FromMilliseconds(value));
+        }
     }
 
     private void LoadSong(string path)
@@ -107,26 +113,24 @@ public partial class MainWindowViewModel : ObservableObject
                         Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
         CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
-        
-        _multiPlayback?.Dispose();
-        var outputs = Audio.GetOutputDevices();
-        var firstWasapi = outputs.First(e => e.DeviceType == OutputDeviceType.Wasapi);
-        _multiPlayback = new MultiTrackAudioEngine(Song.Midi, "GeneralUser-GS.sf2", (MMDevice)firstWasapi.Device);
+    }
 
-        //if (_playback != null)
-        //{
-        //    _playback.NotesPlaybackFinished -= PlaybackOnNotesPlaybackFinished;
-        //    _playback.RepeatStarted -= PlaybackOnRepeatStarted;
-        //    _playback.NoteCallback = null;
-        //    _playback.Dispose();
-        //    _playback = null;
-        //}
-        //
-        //_playback = Song.Midi.GetPlayback(_outputDevice);
-        //_playback.NoteCallback = ChannelMuteFilter;
-        //_playback.NotesPlaybackFinished += PlaybackOnNotesPlaybackFinished;
-        //_playback.Loop = true;
-        //_playback.RepeatStarted += PlaybackOnRepeatStarted;
+    private void CreatePlayback()
+    {
+        if (_multiPlayback != null)
+        {
+            _multiPlayback.OnNotePlayed -= PlaybackOnNotesPlaybackFinished;
+            _multiPlayback.OnRepeatStarted -= PlaybackOnRepeatStarted;
+            //_multiPlayback.NoteCallback = null;
+            _multiPlayback.Dispose();
+            _multiPlayback = null;
+        }
+
+        _multiPlayback = new MultiTrackAudioEngine(Song.Midi, "GeneralUser-GS.sf2", SelectedOutputDevice);
+        //_multiPlayback.NoteCallback = ChannelMuteFilter;
+        _multiPlayback.OnNotePlayed += PlaybackOnNotesPlaybackFinished;
+        _multiPlayback.Loop = true;
+        _multiPlayback.OnRepeatStarted += PlaybackOnRepeatStarted;
     }
 
     private void PlaybackOnRepeatStarted(object? sender, EventArgs e)
@@ -145,11 +149,12 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (!value)
         {
-            //_playback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentTimeMs)));
+            _multiPlayback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentTimeMs)));
         }
     }
 
-    private NotePlaybackData ChannelMuteFilter(NotePlaybackData rawNoteData, long rawTime, long rawLength, TimeSpan playbackTime) => _mutedChannels.Contains(rawNoteData.Channel) ? null : rawNoteData;
+    private NotePlaybackData ChannelMuteFilter(NotePlaybackData rawNoteData, long rawTime, long rawLength, TimeSpan playbackTime)
+        => _mutedChannels.Contains(rawNoteData.Channel) ? null : rawNoteData;
 
     [RelayCommand]
     private void MuteStateChanged(ChunkContext chunk)
@@ -245,41 +250,15 @@ public partial class MainWindowViewModel : ObservableObject
             _outputDevice = null;
         }
 
-        if (value != null)
+        if (value != null && Song?.Midi != null)
         {
-
-            if (value.DeviceType == OutputDeviceType.Asio)
-            {
-                try
-                {
-                    _outputDevice = new AsioSoundFontSynthDevice(value.DeviceName, "GeneralUser-GS.sf2");
-                }
-                catch (Exception e)
-                {
-                    MessageBox.Show("Failed to create audio device :(");
-                    SelectedOutputDevice = null;
-                }
-            }
-            else if (value.DeviceType == OutputDeviceType.Wasapi)
-            {
-                _outputDevice = new StandardSoundFontSynthDevice("GeneralUser-GS.sf2", value.Device as MMDevice);
-            }
-            else
-            {
-                _outputDevice = OutputDevice.GetByName(value.DeviceName);
-            }
-
-
-            //if (_playback != null)
-            //{
-            //    _playback.OutputDevice = _outputDevice;
-            //}
+            CreatePlayback();
         }
     }
 
-    private void PlaybackOnNotesPlaybackFinished(object? sender, NotesEventArgs e)
+    private void PlaybackOnNotesPlaybackFinished(object? sender, NotePlayedArgs e)
     {
-        foreach (var note in e.Notes)
+        foreach (var note in e.NoteEventArgs.Notes)
         {
             if (note.Channel != SelectedChunk.ChannelId) continue;
 
@@ -303,16 +282,16 @@ public partial class MainWindowViewModel : ObservableObject
                         lane.StateChanged.Invoke(this, new StateChangeEventArgs(false));
                     }
                 }
-            }
+            } 
         }
     }
 
     private void CompositionTarget_Rendering(object? sender, EventArgs e)
     {
-        //if (_playback != null && !IsUserSeeking)
-        //{
-        //    CurrentTimeMs = _playback.GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
-        //}
+        if (_multiPlayback != null && !IsUserSeeking)
+        {
+            CurrentTimeMs = _multiPlayback.GetCurrentTime();
+        }
     }
 
     private void OnMidiEvent(object sender, MidiEventReceivedEventArgs e)
