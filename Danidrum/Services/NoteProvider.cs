@@ -2,6 +2,7 @@
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
+using Melanchall.DryWetMidi.Tools;
 using static Danidrum.MainWindowViewModel;
 using DryWetMidiFile = Melanchall.DryWetMidi.Core.MidiFile;
 
@@ -43,9 +44,11 @@ public class SongContext
         Midi = DryWetMidiFile.Read(midiFilePath);
         IsReduced = useReduction;
         TempoMap = Midi.GetTempoMap();
-        IEnumerable<IGrouping<FourBitNumber, TrackChunk>> channelGroups = Midi
-            .GetTrackChunks()
-            .GroupBy(grp => ((ChannelEvent)grp.Events.FirstOrDefault(e =>e is ChannelEvent ch))?.Channel ?? FourBitNumber.MaxValue);
+
+        var channelGroups = Midi.Chunks
+            .OfType<TrackChunk>()
+            .Where(e => e.Events.Count > 100)
+            .GroupBy(grp => grp.Events.OfType<ChannelEvent>().First().Channel);
 
         Channels = channelGroups
             .Where(e => e.Key != FourBitNumber.MaxValue)
