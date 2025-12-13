@@ -22,13 +22,11 @@ public class MultiTrackAudioEngine : IDisposable
     private readonly List<Playback> _playbacks = [];
     private readonly Dictionary<Playback, TrackChunk> TrackMapping = new();
 
-    private ITimeSpan _playbackStart;
     public ITimeSpan PlaybackStart
     {
-        get => _playbackStart;
+        get => _playbacks[0].PlaybackStart;
         set
         {
-            _playbackStart = value;
             foreach (var playback in _playbacks)
             {
                 playback.PlaybackStart = value;
@@ -37,13 +35,11 @@ public class MultiTrackAudioEngine : IDisposable
     }
 
 
-    private ITimeSpan _playbackEnd;
     public ITimeSpan PlaybackEnd
     {
-        get => _playbackEnd;
+        get => _playbacks[0].PlaybackEnd;
         set
         {
-            _playbackEnd = value;
             foreach (var playback in _playbacks)
             {
                 playback.PlaybackEnd = value;
@@ -51,15 +47,26 @@ public class MultiTrackAudioEngine : IDisposable
         }
     }
 
-    private bool _loop;
     public bool Loop
     {
-        get => _loop;
+        get => _playbacks[0].Loop;
         set
         {
             foreach (var playback in _playbacks)
             {
                 playback.Loop = value;
+            }
+        }
+    }
+
+    public double Speed
+    {
+        get => _playbacks[0].Speed;
+        set
+        {
+            foreach (var playback in _playbacks)
+            {
+                playback.Speed = value;
             }
         }
     }
@@ -115,7 +122,6 @@ public class MultiTrackAudioEngine : IDisposable
     public double GetCurrentTime() => _playbacks[0].GetCurrentTime<MetricTimeSpan>().TotalMilliseconds;
 
     private void RepeatStarted(object? sender, EventArgs e) => OnRepeatStarted?.Invoke(this, e);
-
 
     private void TrackPlayback_NotesPlaybackFinished(object? sender, NotesEventArgs e)
     {

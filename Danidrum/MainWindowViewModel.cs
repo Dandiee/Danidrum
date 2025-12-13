@@ -61,7 +61,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnSpeedChanged(double value)
     {
-        //_playback.Speed = value;
+        _multiPlayback.Speed = value;
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute * value;
     }
 
@@ -113,6 +113,11 @@ public partial class MainWindowViewModel : ObservableObject
                         Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
         CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
+
+        if (SelectedOutputDevice != null)
+        {
+            CreatePlayback();
+        }
     }
 
     private void CreatePlayback()
