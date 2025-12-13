@@ -132,18 +132,14 @@ public class NoteLaneControl : FrameworkElement
             dc.DrawLine(new Pen(SubdivisionBrush, 0.5), new Point(0, 0), new Point(ActualWidth, 0));
         }
 
-        var pixelPerMs = _owner?.PixelPerMs ?? ActualWidth / lane.Chunk.Channel.Song.LengthMs;
+        var pixelPerMs = _owner?.PixelPerMs ?? ActualWidth / lane.Chunk.Song.LengthMs;
         double cornerRadius = _lane == null ? 1 : 2;
-
-        var q = lane.Notes.Where(e => e.BeatFractionLength == 0).ToList();
-
-
 
         foreach (var note in lane.Notes)
         {
             var brush = _lane == null ? NoteBrush : note.State switch
             {
-                NoteState.Pending => NoteBrush,
+                NoteState.Pending => NoteBrush,  
                 NoteState.Hit => HitBrush,
                 NoteState.Missed => MissBrush,
                 NoteState.Dragged => DraggedBrush,

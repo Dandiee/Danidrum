@@ -99,7 +99,7 @@ public partial class NoteHighwayControl
         LaneNamesGrid.RowDefinitions.Clear();
         LaneNamesGrid.Children.Clear();
 
-        LanesGrid.Width = PixelPerMs * Chunk.Channel.Song.LengthMs;
+        LanesGrid.Width = PixelPerMs * Chunk.Song.LengthMs;
 
         var backgroundCanvas = new Canvas();
         LanesGrid.Children.Add(backgroundCanvas);
@@ -209,9 +209,9 @@ public partial class NoteHighwayControl
     {
         var control = (NoteHighwayControl)d;
 
-        if (control.NoteCanvasScroller == null || control.Chunk == null || control.Chunk.Channel.Song.LengthMs == 0) return;
+        if (control.NoteCanvasScroller == null || control.Chunk == null || control.Chunk.Song.LengthMs == 0) return;
 
-        var ratio = (control.CurrentTimeMs /*- control.VisualLatencyInMs*/) / control.Chunk.Channel.Song.LengthMs;
+        var ratio = (control.CurrentTimeMs /*- control.VisualLatencyInMs*/) / control.Chunk.Song.LengthMs;
         var here = (control.NoteCanvasScroller.ExtentWidth - control.NoteCanvasScroller.ActualWidth / 2) * ratio;
         control.NoteCanvasScroller.ScrollToHorizontalOffset(here);
     }

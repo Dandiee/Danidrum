@@ -1,8 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
-using Melanchall.DryWetMidi.Tools;
 using static Danidrum.MainWindowViewModel;
 using DryWetMidiFile = Melanchall.DryWetMidi.Core.MidiFile;
 
@@ -31,12 +29,12 @@ public class SongContext
     public DryWetMidiFile Midi { get; }
     public string FilePath { get; }
     public TempoMap TempoMap { get; }
-    public IReadOnlyList<ChannelContext> Channels { get; }
+    public IReadOnlyList<ChunkContext> Chunks { get; }
     public IReadOnlyList<MeasureContext> Measures { get; }
     public double LengthMs { get; }
     public bool IsReduced { get; }
 
-    public IReadOnlyDictionary<int, ChannelContext> ChannelsById { get; }
+    public IReadOnlyDictionary<TrackChunk, ChunkContext> TrackMapping { get; }
 
     public SongContext(string midiFilePath, bool useReduction)
     {
@@ -45,31 +43,25 @@ public class SongContext
         IsReduced = useReduction;
         TempoMap = Midi.GetTempoMap();
 
-        var channelGroups = Midi.Chunks
-            .OfType<TrackChunk>()
+        Chunks = Midi.Chunks.OfType<TrackChunk>()
             .Where(e => e.Events.Count > 100)
-            .GroupBy(grp => grp.Events.OfType<ChannelEvent>().First().Channel);
+            .Select(e => new ChunkContext(this, e, false))
+            .ToList();
 
-        Channels = channelGroups
-            .Where(e => e.Key != FourBitNumber.MaxValue)
-            .Select(grp => new ChannelContext(this, grp, useReduction))
-            .OrderBy(e => e.ChannelId).ToList();
+        TrackMapping = Chunks.ToDictionary(e => e.TrackChunk);
 
-        //Chunks = Midi.GetTrackChunks().Select(chunk => new ChunkContext(this, chunk)).OrderBy(e => e.ChannelId).ToList();
         LengthMs = Midi.GetDuration<MetricTimeSpan>().TotalMilliseconds;
         Measures = Extract(TempoMap, Midi.GetDuration<MidiTimeSpan>()).ToList();
-
-        ChannelsById = Channels.ToDictionary(e => (int)e.ChannelId);
     }
 
     public void Clean()
     {
-        foreach (var lane in Channels.SelectMany(e => e.Chunks).SelectMany(e => e.Lanes))
+        foreach (var lane in Chunks.SelectMany(e => e.Lanes))
         {
             lane.StateChanged?.Invoke(this, new StateChangeEventArgs(true));
         }
     }
-  
+
     private static List<MeasureContext> Extract(TempoMap tempoMap, long endTime)
     {
         var tempoChanges = tempoMap.GetTempoChanges().ToList();
@@ -130,88 +122,114 @@ public class SongContext
     }
 }
 
-public class MeasureContext
-{
-    public int MeasureIndex { get; set; }
-    public double StartTimeMs { get; set; }
-    public double EndTimeMs { get; set; }
-    public double LengthMs { get; set; }
-    public Tempo Tempo { get; set; }
-    public TimeSignature TimeSignature { get; set; }
-}
-
-public sealed class ChannelContext
-{
-    public TrackChunk TrackChunk { get; }
-    public IReadOnlyList<ChunkContext> Chunks { get; }
-    public SongContext Song { get; }
-    public FourBitNumber ChannelId { get; }
-
-    public IReadOnlyDictionary<int, List<LaneContext>> LanesByNote { get; }
-
-
-    public ChannelContext(SongContext song, IGrouping<FourBitNumber, TrackChunk> channelGroup, bool useReduction)
-    {
-        Song = song;
-        ChannelId = channelGroup.Key;
-        Chunks = channelGroup.Select(chunk => new ChunkContext(this, chunk, useReduction)).ToList();
-        LanesByNote = Chunks
-            .SelectMany(chunk => chunk.Lanes)
-            .GroupBy(e => e.LaneId)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.ToList());
-    }
-}
-
 public partial class ChunkContext : ObservableObject
 {
     public static readonly HashSet<string> DrumKeywords = new(["drum", "kit", "perc"], StringComparer.OrdinalIgnoreCase);
 
+    public SongContext Song { get; }
     public TrackChunk TrackChunk { get; }
-    public ChannelContext Channel { get; }
-
     public IReadOnlyList<LaneContext> Lanes { get; }
 
     public string Name { get; }
     public string InstrumentName { get; }
     public int InstrumentId { get; }
-    public int ChannelId { get; }
     public bool IsLikelyDrumTrack { get; }
 
     [ObservableProperty] private bool _isMuted = false;
 
-    private readonly IReadOnlyDictionary<int, LaneContext> _lanesByNumbers;
+    public Dictionary<int, LaneContext> LanesMapping;
 
-    public ChunkContext(ChannelContext channel, TrackChunk trackChunk, bool useReduction)
+    public List<TimedNoteEvent> Notes { get; }
+
+
+    public ChunkContext(SongContext song, TrackChunk trackChunk, bool useReduction)
     {
-        Channel = channel;
+        Song = song;
         TrackChunk = trackChunk;
         InstrumentId = trackChunk.Events.OfType<ProgramChangeEvent>().First().ProgramNumber;
-        var notes = trackChunk.GetNotes().ToList();
-        ChannelId = notes[0].Channel;
         Name = trackChunk.Events.OfType<SequenceTrackNameEvent>().FirstOrDefault()?.Text ?? "Unknown Track";
         InstrumentName = string.Join(", ", trackChunk.Events.OfType<InstrumentNameEvent>().Select(e => e.Text));
+        IsLikelyDrumTrack = InstrumentId == 1024;
 
-        IsLikelyDrumTrack = DrumKeywords.Any(key => Name.Contains(key, StringComparison.OrdinalIgnoreCase)
-                                                    || InstrumentName.Contains(key, StringComparison.OrdinalIgnoreCase));
+        Notes = GetTimedNoteEvents(trackChunk.Events.ToList());
 
-        var notesByNumbers = notes.GroupBy(e => useReduction
-            ? (int)Articulation.GetKitArticulation(e.NoteNumber)
-            : e.NoteNumber);
+        var notesByNumbers = Notes
+            .GroupBy(e => useReduction
+                                        ? (int)Articulation.GetKitArticulation(e.NoteNumber)
+                                        : e.NoteNumber);
 
         Lanes = notesByNumbers.Select(grp => new LaneContext(this, grp.Key, grp.ToList(), useReduction)).OrderBy(lane => lane.LaneId).ToList();
-        _lanesByNumbers = Lanes.ToDictionary(e => e.LaneId);
+
+        LanesMapping = Lanes.ToDictionary(e => e.LaneId);
     }
 
-    public bool TryGetLane(int laneId, out LaneContext lane)
+    private List<TimedNoteEvent> GetTimedNoteEvents(List<MidiEvent> events)
     {
-        if (_lanesByNumbers.TryGetValue(laneId, out var cachedLane))
+        var timedEvents = new List<TimedNoteEvent>();
+
+        var time = 0L;
+        var measureIndex = 0;
+
+        var noteOns = new List<(int Index, TimedEvent On)>();
+        for (var i = 0; i < events.Count; i++)
         {
-            lane = cachedLane;
-            return true;
+            var midiEvent = events[i];
+            time += midiEvent.DeltaTime;
+
+            if (midiEvent is MarkerEvent marker && marker.Text.StartsWith("MEASURE_"))
+            {
+                measureIndex = int.Parse(marker.Text.Split('_')[1]);
+            }
+            else if (midiEvent is NoteOnEvent noteOn)
+            {
+                noteOns.Add(new(i, new TimedEvent(noteOn, time)));
+            }
+            else if (midiEvent is NoteOffEvent noteOff)
+            {
+                var pair = noteOns.First(e =>
+                {
+                    var on = (NoteOnEvent)e.On.Event;
+                    return on.Channel == noteOff.Channel && on.NoteNumber == noteOff.NoteNumber;
+                });
+
+                noteOns.Remove(pair);
+                timedEvents.Add(new TimedNoteEvent(measureIndex, pair.Index, pair.On, new TimedEvent(noteOff, time)));
+            }
         }
 
-        lane = null;
-        return false;
+        if (noteOns.Count > 0) throw new Exception();
+
+        return timedEvents
+            .OrderBy(e => e.MeasureIndex)
+            .ThenBy(e => e.EventIndex)
+            .ToList();
+    }
+}
+
+public sealed class TimedNoteEvent
+{
+    public int MeasureIndex { get; }
+    public int EventIndex { get; }
+
+    public long Start { get; }
+    public long End { get; }
+    public long Duration { get; }
+
+    public int NoteNumber { get; }
+
+    public NoteOnEvent On { get; }
+    public NoteOffEvent Off { get; }
+
+    public TimedNoteEvent(int measureIndex, int eventIndex, TimedEvent on, TimedEvent off)
+    {
+        MeasureIndex = measureIndex;
+        EventIndex = eventIndex;
+        Start = on.Time;
+        End = off.Time;
+        Duration = End - Start;
+        On = (NoteOnEvent)on.Event;
+        Off = (NoteOffEvent)off.Event;
+        NoteNumber = On.NoteNumber;
     }
 }
 
@@ -233,21 +251,22 @@ public class LaneContext
     public EventHandler<StateChangeEventArgs> StateChanged { get; set; }
     public EventHandler<InputArg> InputReceived { get; set; }
     public KitArticulation KitArticulation { get; set; }
-    public IReadOnlyDictionary<long, List<NoteContext>> NotesByStartTimeTick { get; }
+    public IReadOnlyDictionary<long, NoteContext> NoteStartTimeMapping { get; }
 
-    public LaneContext(ChunkContext chunk, int laneId, IReadOnlyList<Note> notes, bool useReduction)
+    public LaneContext(ChunkContext chunk, int laneId, IReadOnlyList<TimedNoteEvent> notes, bool useReduction)
     {
         Chunk = chunk;
         LaneId = laneId;
         Name = useReduction
             ? Articulation.KitArticulationToName[(KitArticulation)LaneId]
-            : Articulation.GetGmNoteName(LaneId, Chunk.ChannelId);
+            : Articulation.GetGmNoteName(LaneId, Chunk.InstrumentId);
+
         KitArticulation = (KitArticulation)LaneId;
         Notes = notes.Select(note => new NoteContext(this, note)).ToList();
 
-        NotesByStartTimeTick = Notes
-            .GroupBy(e => e.Time)
-            .ToDictionary(nc => nc.Key, nc => nc.ToList());
+        NoteStartTimeMapping = Notes
+            .GroupBy(e => e.Note.Start)
+            .ToDictionary(nc => nc.Key, nc => nc.First());
 
         SetNoteWidths();
     }
@@ -300,7 +319,7 @@ public class NoteContext : ITimedObject
     public double? HitOffsetMs { get; set; }
     public double NoteWidthMs { get; set; }
     public double NoteRectStartMs { get; set; }
-    public Note Note { get; }
+    public TimedNoteEvent Note { get; }
     public LaneContext Lane { get; }
     public double StartTimeMs { get; }
     public double DurationMs { get; }
@@ -308,26 +327,36 @@ public class NoteContext : ITimedObject
     public NoteContext? Previous { get; set; }
     public NoteContext? Next { get; set; }
 
-    public NoteContext(LaneContext lane, Note note)
+    public NoteContext(LaneContext lane, TimedNoteEvent note)
     {
         State = NoteState.Pending;
 
         Note = note;
         Lane = lane;
 
-        var time = note.TimeAs<MetricTimeSpan>(lane.Chunk.Channel.Song.TempoMap);
-        var length = note.LengthAs<MetricTimeSpan>(lane.Chunk.Channel.Song.TempoMap);
+        var time = TimeConverter.ConvertTo<MetricTimeSpan>(note.Start, Lane.Chunk.Song.TempoMap);
+        var length = TimeConverter.ConvertTo<MetricTimeSpan>(note.Duration, Lane.Chunk.Song.TempoMap);
 
-        var barBeatFraction = note.LengthAs<BarBeatFractionTimeSpan>(Lane.Chunk.Channel.Song.TempoMap);
+        var barBeatFraction = TimeConverter.ConvertTo<BarBeatFractionTimeSpan>(length, Lane.Chunk.Song.TempoMap);
         BeatFractionLength = barBeatFraction.Beats;
 
         StartTimeMs = time.TotalMilliseconds;
         DurationMs = length.TotalMilliseconds;
 
-        Time = Note.Time;
+        Time = Note.Start;
     }
 
-    public ITimedObject Clone() => Note.Clone();
+    public ITimedObject Clone() => new NoteContext(null, null);
 
     public long Time { get; set; }
+}
+
+public class MeasureContext
+{
+    public int MeasureIndex { get; set; }
+    public double StartTimeMs { get; set; }
+    public double EndTimeMs { get; set; }
+    public double LengthMs { get; set; }
+    public Tempo Tempo { get; set; }
+    public TimeSignature TimeSignature { get; set; }
 }
