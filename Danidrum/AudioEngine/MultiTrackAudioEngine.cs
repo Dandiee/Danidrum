@@ -1,4 +1,5 @@
-﻿using Melanchall.DryWetMidi.Core;
+﻿using Danidrum.Context;
+using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Interaction;
 using Melanchall.DryWetMidi.Multimedia;
 using MeltySynth;
@@ -9,18 +10,18 @@ using MidiFile = Melanchall.DryWetMidi.Core.MidiFile;
 
 namespace Danidrum.AudioEngine;
 
-public record NotePlayedArgs(TrackChunk Track, NotesEventArgs NoteEventArgs);
+public record NotePlayedArgs(ChunkContext Chunk, NotesEventArgs NoteEventArgs);
 
 public class MultiTrackAudioEngine : IDisposable
 {
-    public MidiFile Midi { get; }
+    public SongContext Song { get; }
     private readonly IWavePlayer _wavePlayer;
 
     public event EventHandler<NotePlayedArgs> OnNotePlayed;
-    public event EventHandler OnRepeatStarted;
+    public event EventHandler? OnRepeatStarted;
 
     private readonly List<Playback> _playbacks = [];
-    private readonly Dictionary<Playback, TrackChunk> TrackMapping = new();
+    private readonly Dictionary<Playback, ChunkContext> TrackMapping = new();
 
     public ITimeSpan PlaybackStart
     {
@@ -33,8 +34,6 @@ public class MultiTrackAudioEngine : IDisposable
             }
         }
     }
-
-
     public ITimeSpan PlaybackEnd
     {
         get => _playbacks[0].PlaybackEnd;
@@ -46,7 +45,6 @@ public class MultiTrackAudioEngine : IDisposable
             }
         }
     }
-
     public bool Loop
     {
         get => _playbacks[0].Loop;
@@ -58,7 +56,6 @@ public class MultiTrackAudioEngine : IDisposable
             }
         }
     }
-
     public double Speed
     {
         get => _playbacks[0].Speed;
@@ -71,9 +68,9 @@ public class MultiTrackAudioEngine : IDisposable
         }
     }
 
-    public MultiTrackAudioEngine(MidiFile midi, string soundFontPath, OutputAudioDevice outputAudioDevice)
+    public MultiTrackAudioEngine(SongContext song, string soundFontPath, OutputAudioDevice outputAudioDevice)
     {
-        Midi = midi;
+        Song = song;
         
         var sharedSoundFont = new SoundFont(soundFontPath);
         var waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(44100, 2);
@@ -83,24 +80,24 @@ public class MultiTrackAudioEngine : IDisposable
             ? new AsioOut(outputAudioDevice.DeviceName)
             : new WasapiOut(outputAudioDevice.Device as MMDevice, AudioClientShareMode.Shared, true, 20);
 
-        var tempoMap = Midi.GetTempoMap();
+         
+        var tempoMap = Song.Midi.GetTempoMap();
 
-        foreach (var chunk in Midi.Chunks.OfType<TrackChunk>())
+        foreach (var chunk in Song.Chunks)
         {
-            var programChange = chunk.Events.OfType<ProgramChangeEvent>().FirstOrDefault();
-            int instrumentId = programChange?.ProgramNumber ?? 0;
             var synth = new Synthesizer(sharedSoundFont, 44100);
             var audioProvider = new SampleProvider(synth);
 
-            mixer.AddMixerInput(instrumentId == 30 || instrumentId == 29
-                ? new DistortionProvider(audioProvider)
+            mixer.AddMixerInput(chunk.UseDistortion
+                ? new DistortionProvider(audioProvider, chunk)
                 : audioProvider);
-
-            var trackPlayback = new Playback(chunk.GetTimedEvents(), tempoMap, new DirectSynthDevice(synth));
+             
+            var trackPlayback = new Playback(chunk.TrackChunk.GetTimedEvents(), tempoMap, new DirectSynthDevice(synth, chunk));
 
             TrackMapping[trackPlayback] = chunk;
 
             trackPlayback.NotesPlaybackFinished += TrackPlayback_NotesPlaybackFinished;
+            trackPlayback.NoteCallback = (data, time, length, playbackTime) => NoteCallback(chunk, data, time, length, playbackTime);
 
             _playbacks.Add(trackPlayback);
         }
@@ -110,6 +107,10 @@ public class MultiTrackAudioEngine : IDisposable
         _wavePlayer.Init(mixer);
         _wavePlayer.Play();
     }
+
+    private NotePlaybackData NoteCallback(ChunkContext chunk, NotePlaybackData rawNoteData, long rawTime,
+        long rawLength, TimeSpan playbackTime)
+        => chunk.IsMuted ? null : rawNoteData;
 
     public void MoveToTime(ITimeSpan timeSpan)
     {

@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using Danidrum.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Danidrum;

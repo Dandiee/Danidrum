@@ -1,11 +1,8 @@
 ﻿
-using Danidrum.Services;
-using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
+using Danidrum.Context;
 
 namespace Danidrum.UserControls;
 public partial class TimeLineUserControl

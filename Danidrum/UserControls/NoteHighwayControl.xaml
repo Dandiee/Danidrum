@@ -4,8 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:Danidrum.UserControls"
-             xmlns:services="clr-namespace:Danidrum.Services"
              xmlns:danidrum="clr-namespace:Danidrum"
+             xmlns:context="clr-namespace:Danidrum.Context"
              d:DataContext="{d:DesignInstance IsDesignTimeCreatable=False, Type=danidrum:MainWindowViewModel}"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -13,7 +13,7 @@
     <UserControl.Resources>
         <local:MidLineConverter x:Key="MidLineConverter"/>
 
-        <DataTemplate x:Key="LaneNameTemplate" DataType="{x:Type services:LaneContext}">
+        <DataTemplate x:Key="LaneNameTemplate" DataType="{x:Type context:LaneContext}">
             <Border BorderBrush="{DynamicResource MaterialDesign.Brush.Primary}"
                     VerticalAlignment="Stretch"
                     HorizontalAlignment="Stretch"

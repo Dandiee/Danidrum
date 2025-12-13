@@ -2,7 +2,7 @@ using System.CodeDom;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using Danidrum.Services;
+using Danidrum.Context;
 
 namespace Danidrum.UserControls;
 

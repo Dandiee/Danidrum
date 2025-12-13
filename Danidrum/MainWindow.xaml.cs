@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,15 @@ public partial class MainWindow
 
         DataContext = App.Services.GetRequiredService<MainWindowViewModel>();
     }
+}
+
+public sealed class BoolToVisibleConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => (bool)value ? Visibility.Visible : Visibility.Collapsed;
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => false;
 }
 
 public sealed class BoolNegationConverter : IValueConverter

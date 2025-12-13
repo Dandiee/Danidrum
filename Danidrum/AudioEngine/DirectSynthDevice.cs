@@ -1,10 +1,11 @@
-﻿using Melanchall.DryWetMidi.Core;
+﻿using Danidrum.Context;
+using Melanchall.DryWetMidi.Core;
 using Melanchall.DryWetMidi.Multimedia;
 using MeltySynth;
 
 namespace Danidrum.AudioEngine;
 
-public class DirectSynthDevice(Synthesizer synth) : IOutputDevice
+public class DirectSynthDevice(Synthesizer synth, ChunkContext Chunk) : IOutputDevice
 {
     public void SendEvent(MidiEvent midiEvent)
     {
@@ -12,7 +13,7 @@ public class DirectSynthDevice(Synthesizer synth) : IOutputDevice
         {
             case NoteOnEvent on: Process(on, 0x90, on.NoteNumber, on.Velocity); break;
             case NoteOffEvent off: Process(off, 0x80, off.NoteNumber, off.Velocity); break;
-            case ProgramChangeEvent pc: Process(pc, 0xC0, pc.ProgramNumber, 0); break;
+            case ProgramChangeEvent pc: Process(pc, 0xC0, Chunk.Instrument.Id, 0); break;
             case ControlChangeEvent cc: Process(cc, 0xB0, cc.ControlNumber, cc.ControlValue); break;
             case PitchBendEvent pb: Process(pb, 0xE0, pb.PitchValue & 0x7F, (pb.PitchValue >> 7) & 0x7F); break;
         }

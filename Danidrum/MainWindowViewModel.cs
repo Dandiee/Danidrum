@@ -3,16 +3,17 @@ using System.IO;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Danidrum.Services;
 using Melanchall.DryWetMidi.Interaction;
 using Melanchall.DryWetMidi.Multimedia;
 using System.Windows.Media;
 using Danidrum.AudioEngine;
+using Danidrum.Context;
 using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Microsoft.Win32;
 using NAudio.CoreAudioApi;
 using NAudio.Wave.Asio;
+using ChunkContext = Danidrum.Context.ChunkContext;
 
 namespace Danidrum;
 
@@ -51,8 +52,6 @@ public partial class MainWindowViewModel : ObservableObject
     private IOutputDevice _outputDevice;
     private InputDevice _inputDevice;
     [ObservableProperty] private IReadOnlyList<ChunkContext> _chunks;
-
-    private HashSet<int> _mutedChannels = new();
 
     public MainWindowViewModel()
     {
@@ -102,13 +101,12 @@ public partial class MainWindowViewModel : ObservableObject
     private void LoadSong(string path)
     {
         IsPlaying = false;
-        _mutedChannels.Clear();
         Song = new SongContext(path, IsReduced);
         Chunks = Song.Chunks.ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
         MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
-        SelectedChunk = Chunks.FirstOrDefault(e => e.InstrumentId == 1024 && e.IsLikelyDrumTrack) ??
-                        Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
+        SelectedChunk = Chunks.FirstOrDefault(e => e.Instrument.Id == 1024 && e.IsDrumTrack) ??
+                        Chunks.FirstOrDefault(t => t.IsDrumTrack) ?? Chunks.FirstOrDefault();
         CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
 
@@ -120,6 +118,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void CreatePlayback()
     {
+        IsPlaying = false;
+
         if (_multiPlayback != null)
         {
             _multiPlayback.OnNotePlayed -= PlaybackOnNotesPlaybackFinished;
@@ -129,7 +129,7 @@ public partial class MainWindowViewModel : ObservableObject
             _multiPlayback = null;
         }
 
-        _multiPlayback = new MultiTrackAudioEngine(Song.Midi, "GeneralUser-GS.sf2", SelectedOutputDevice);
+        _multiPlayback = new MultiTrackAudioEngine(Song, "GeneralUser-GS.sf2", SelectedOutputDevice);
         //_multiPlayback.NoteCallback = ChannelMuteFilter;
         _multiPlayback.OnNotePlayed += PlaybackOnNotesPlaybackFinished;
         _multiPlayback.Loop = true;
@@ -154,20 +154,6 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _multiPlayback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentTimeMs)));
         }
-    }
-
-    private NotePlaybackData ChannelMuteFilter(NotePlaybackData rawNoteData, long rawTime, long rawLength, TimeSpan playbackTime)
-        => _mutedChannels.Contains(rawNoteData.Channel) ? null : rawNoteData;
-
-    [RelayCommand]
-    private void MuteStateChanged(ChunkContext chunk)
-    {
-        //foreach (var chk in chunk.Channel.Chunks)
-        //{
-        //    chk.IsMuted = chunk.IsMuted;
-        //}
-
-        //_mutedChannels = Song.Chunks.SelectMany(e => e.Chunks).Where(e => e.IsMuted).Select(e => e.ChannelId).ToHashSet();
     }
 
     [RelayCommand]
@@ -226,6 +212,24 @@ public partial class MainWindowViewModel : ObservableObject
         snareLane.InputReceived?.Invoke(this, new InputArg(_currentTimeMs));
     }
 
+    [RelayCommand]
+    private void TrackChanged()
+    {
+        var currentTime = _multiPlayback?.GetCurrentTime();
+        var isPlaying = IsPlaying;
+        CreatePlayback();
+
+        if (currentTime.HasValue)
+        {
+            IsUserSeeking = true;
+            CurrentTimeMs = currentTime.Value;
+            IsUserSeeking = false;
+            //_multiPlayback.MoveToTime(new MetricTimeSpan(TimeSpan.FromMilliseconds(CurrentTimeMs)));
+        }
+
+        IsPlaying = isPlaying;
+    }
+
     partial void OnSelectedInputDeviceChanged(string value)
     {
         if (_inputDevice != null)
@@ -263,10 +267,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         foreach (var note in e.NoteEventArgs.Notes)
         {
-            var chunk = Song.TrackMapping[e.Track];
-            if (SelectedChunk != chunk) continue;
+            if (SelectedChunk != e.Chunk) continue;
 
-            var lane = chunk.LanesMapping[note.NoteNumber];
+            var lane = e.Chunk.LanesMapping[note.NoteNumber];
             var ctx = lane.NoteStartTimeMapping[note.Time];
             if (ctx.State == NoteState.Pending)
             {

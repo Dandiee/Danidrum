@@ -1,8 +1,9 @@
-﻿using NAudio.Wave;
+﻿using Danidrum.Context;
+using NAudio.Wave;
 
 namespace Danidrum.AudioEngine;
 
-public class DistortionProvider(ISampleProvider source) : ISampleProvider
+public class DistortionProvider(ISampleProvider source, ChunkContext chunk) : ISampleProvider
 {
     public WaveFormat WaveFormat => source.WaveFormat;
 
@@ -10,8 +11,9 @@ public class DistortionProvider(ISampleProvider source) : ISampleProvider
     {
         // 1. Get clean audio from the Synth
         int samplesRead = source.Read(buffer, offset, count);
-        var outputGain = 0.05f;
-        var drive = 50f;
+        var outputGain = chunk.Gain;
+        var drive = chunk.Drive;
+
         // 2. Distort it!
         for (int i = 0; i < samplesRead; i++)
         {
