@@ -402,10 +402,10 @@ public static class Articulation
     { DrumArticulation.OpenTriangle, KitArticulation.OtherPercussion }
 };
 
-    public static string GetGmNoteName(int gmNoteNumber, int channelId)
+    public static string GetGmNoteName(int gmNoteNumber, int instrumentId)
     {
         // If it's the drum channel, use the drum map
-        if (channelId == 9)
+        if (instrumentId == 1024)
         {
             var drumArticulation = GmNoteToArticulation[gmNoteNumber];
             return ArticulationToName[drumArticulation];

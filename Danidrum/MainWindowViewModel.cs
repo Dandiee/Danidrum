@@ -77,10 +77,8 @@ public partial class MainWindowViewModel : ObservableObject
             }
 
             _multiPlayback.Play();
-
-            //_playback.Start();
         }
-        else _multiPlayback.Stop(); // _playback.Stop();
+        else _multiPlayback.Stop();
     }
 
     partial void OnIsReducedChanged(bool value) => LoadSong(Song.FilePath);
@@ -106,10 +104,10 @@ public partial class MainWindowViewModel : ObservableObject
         IsPlaying = false;
         _mutedChannels.Clear();
         Song = new SongContext(path, IsReduced);
-        Chunks = Song.Channels.SelectMany(e => e.Chunks).ToList();
+        Chunks = Song.Chunks.ToList();
         Bpm = Song.TempoMap.GetTempoAtTime(new MetricTimeSpan(0)).BeatsPerMinute;
         MeasureStartTimesInMs = new DoubleCollection(Song.Measures.Select(m => m.StartTimeMs).ToList());
-        SelectedChunk = Chunks.FirstOrDefault(e => e.ChannelId == 9 && e.IsLikelyDrumTrack) ??
+        SelectedChunk = Chunks.FirstOrDefault(e => e.InstrumentId == 1024 && e.IsLikelyDrumTrack) ??
                         Chunks.FirstOrDefault(t => t.IsLikelyDrumTrack) ?? Chunks.FirstOrDefault();
         CompositionTarget.Rendering += CompositionTarget_Rendering;
         IsLoading = false;
@@ -164,12 +162,12 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void MuteStateChanged(ChunkContext chunk)
     {
-        foreach (var chk in chunk.Channel.Chunks)
-        {
-            chk.IsMuted = chunk.IsMuted;
-        }
+        //foreach (var chk in chunk.Channel.Chunks)
+        //{
+        //    chk.IsMuted = chunk.IsMuted;
+        //}
 
-        _mutedChannels = Song.Channels.SelectMany(e => e.Chunks).Where(e => e.IsMuted).Select(e => e.ChannelId).ToHashSet();
+        //_mutedChannels = Song.Chunks.SelectMany(e => e.Chunks).Where(e => e.IsMuted).Select(e => e.ChannelId).ToHashSet();
     }
 
     [RelayCommand]
@@ -265,29 +263,17 @@ public partial class MainWindowViewModel : ObservableObject
     {
         foreach (var note in e.NoteEventArgs.Notes)
         {
-            if (note.Channel != SelectedChunk.ChannelId) continue;
+            var chunk = Song.TrackMapping[e.Track];
+            if (SelectedChunk != chunk) continue;
 
-            if (!Song.ChannelsById.TryGetValue(note.Channel, out var channel)) continue;
-
-            var enu = Articulation.ArticulationToKitArticulation[Articulation.GmNoteToArticulation[note.NoteNumber]];
-
-            if (!channel.LanesByNote.TryGetValue((int)enu, out var lanes)) continue;
-
-            foreach (var lane in lanes)
+            var lane = chunk.LanesMapping[note.NoteNumber];
+            var ctx = lane.NoteStartTimeMapping[note.Time];
+            if (ctx.State == NoteState.Pending)
             {
-                if (lane.NotesByStartTimeTick.TryGetValue(note.Time, out var relatedNotes))
-                {
-                    foreach (var relatedNote in relatedNotes)
-                    {
-                        if (relatedNote.State == NoteState.Pending)
-                        {
-                            relatedNote.State = NoteState.Missed;
-                        }
+                ctx.State = NoteState.Missed;
+            }
 
-                        lane.StateChanged.Invoke(this, new StateChangeEventArgs(false));
-                    }
-                }
-            } 
+            lane.StateChanged?.Invoke(this, new StateChangeEventArgs(false));
         }
     }
 
@@ -308,7 +294,7 @@ public partial class MainWindowViewModel : ObservableObject
             var articulation = Articulation.Td07NoteToArticulation[noteOn.NoteNumber];
             var kitArticulation = Articulation.ArticulationToKitArticulation[articulation];
 
-            if (SelectedChunk.TryGetLane((int)kitArticulation, out var lane))
+            if (SelectedChunk.LanesMapping.TryGetValue((int)kitArticulation, out var lane))
             {
                 lane.InputReceived?.Invoke(this, new InputArg(_currentTimeMs));
             }
