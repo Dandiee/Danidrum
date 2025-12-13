@@ -86,13 +86,28 @@ public class MultiTrackAudioEngine : IDisposable
         foreach (var chunk in Song.Chunks)
         {
             var synth = new Synthesizer(sharedSoundFont, 44100);
-            var audioProvider = new SampleProvider(synth);
+            var audioProvider = new SampleProvider(synth, chunk);
 
             mixer.AddMixerInput(chunk.UseDistortion
                 ? new DistortionProvider(audioProvider, chunk)
                 : audioProvider);
-             
-            var trackPlayback = new Playback(chunk.TrackChunk.GetTimedEvents(), tempoMap, new DirectSynthDevice(synth, chunk));
+
+            // 1. Get Notes (enables NoteCallback)
+            var notes = chunk.TrackChunk.GetNotes();
+
+            // 2. Get "Other" Events (PitchBend, CC, etc.)
+            // We filter OUT NoteOn/NoteOff because the 'notes' list above already handles them.
+            var otherEvents = chunk.TrackChunk.GetTimedEvents()
+                .Where(e => e.Event is not NoteOnEvent && e.Event is not NoteOffEvent);
+
+            // 3. Combine and Sort them
+            // Playback requires a single timeline of mixed objects sorted by time
+            var mixedObjects = notes.Cast<ITimedObject>()
+                .Concat(otherEvents)
+                .OrderBy(o => o.Time);
+
+            // 4. Create Playback with the mixed list
+            var trackPlayback = new Playback(mixedObjects, tempoMap, new DirectSynthDevice(synth, chunk));
 
             TrackMapping[trackPlayback] = chunk;
 

@@ -1,36 +1,18 @@
-﻿using MeltySynth;
+﻿using Danidrum.Context;
+using MeltySynth;
 using NAudio.Wave;
 
 namespace Danidrum.AudioEngine;
 
-public class SampleProvider : ISampleProvider
+public class SampleProvider(Synthesizer synthesizer, ChunkContext chunk) : ISampleProvider
 {
-    private readonly Synthesizer _synthesizer;
-    public WaveFormat WaveFormat { get; }
+    public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(synthesizer.SampleRate, 2); // Stereo
 
     // Internal buffers for MeltySynth to render into (non-interleaved)
-    private float[] _leftBuffer;
-    private float[] _rightBuffer;
+    private float[] _leftBuffer = new float[2048];
+    private float[] _rightBuffer = new float[2048];
 
-    public SampleProvider(Synthesizer synthesizer)
-    {
-        WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(synthesizer.SampleRate, 2); // Stereo
-        _synthesizer = synthesizer;
-
-        // Initialize buffers to a reasonable default (e.g., 2048 samples)
-        _leftBuffer = new float[2048];
-        _rightBuffer = new float[2048];
-    }
-
-    public SampleProvider(string soundFontPath, int sampleRate = 44100)
-    {
-        WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2); // Stereo
-        _synthesizer = new Synthesizer(soundFontPath, sampleRate);
-
-        // Initialize buffers to a reasonable default (e.g., 2048 samples)
-        _leftBuffer = new float[2048];
-        _rightBuffer = new float[2048];
-    }
+    // Initialize buffers to a reasonable default (e.g., 2048 samples)
 
     public int Read(float[] buffer, int offset, int count)
     {
@@ -50,15 +32,15 @@ public class SampleProvider : ISampleProvider
         var rightSpan = _rightBuffer.AsSpan(0, samplesToRender);
 
         // 3. Render audio into our *internal* L/R buffers
-        _synthesizer.Render(leftSpan, rightSpan);
+        synthesizer.Render(leftSpan, rightSpan);
 
         // 4. Manually interleave the audio from our internal buffers
         //    into the 'buffer' (at 'offset') that NAudio provided.
         int outIndex = offset;
         for (int i = 0; i < samplesToRender; i++)
         {
-            buffer[outIndex++] = _leftBuffer[i];
-            buffer[outIndex++] = _rightBuffer[i];
+            buffer[outIndex++] = _leftBuffer[i] * chunk.Volume;
+            buffer[outIndex++] = _rightBuffer[i] * chunk.Volume;
         }
 
         return count;

@@ -9,6 +9,7 @@ public class DirectSynthDevice(Synthesizer synth, ChunkContext Chunk) : IOutputD
 {
     public void SendEvent(MidiEvent midiEvent)
     {
+
         switch (midiEvent)
         {
             case NoteOnEvent on: Process(on, 0x90, on.NoteNumber, on.Velocity); break;
@@ -22,9 +23,20 @@ public class DirectSynthDevice(Synthesizer synth, ChunkContext Chunk) : IOutputD
     private void Process(ChannelEvent midiEvent, int command, int data1, int data2)
         => synth.ProcessMidiMessage(midiEvent.Channel, command, data1, data2);
 
-    // Boilerplate for IOutputDevice interface
     public event EventHandler<MidiEventSentEventArgs>? EventSent;
-    public void PrepareForEventsSending() { }
+    public void PrepareForEventsSending()
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            synth.ProcessMidiMessage(i, 0xB0, 100, 0);   // RPN LSB
+            synth.ProcessMidiMessage(i, 0xB0, 101, 0);   // RPN MSB
+            synth.ProcessMidiMessage(i, 0xB0, 6, 24);    // Range = 12 semitones
+            synth.ProcessMidiMessage(i, 0xB0, 100, 127); // Reset RPN
+            synth.ProcessMidiMessage(i, 0xB0, 101, 127); // Reset RPN
+        }
+    }
+
+
     public void Dispose() { }
     public string Name => "DirectSynth";
 }
