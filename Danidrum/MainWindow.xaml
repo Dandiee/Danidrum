@@ -131,13 +131,30 @@
                                     <Slider HorizontalAlignment="Stretch" Value="{Binding Volume}" 
                                             Margin="10 0"
                                             Minimum="0" Maximum="1" VerticalAlignment="Center" />
+
+                                </DockPanel>
+
+
+                                <DockPanel Margin="0 0 0 20" >
+                                    <materialDesign:PackIcon Kind="ShapePlus" Width="22" Height="22" 
+                                                             VerticalAlignment="Center" DockPanel.Dock="Left" />
+
+                                    <ComboBox ItemsSource="{x:Static context:InstrumentCategory.All}" 
+                                              Margin="10 0"
+                                              SelectedValue="{Binding InstrumentCategory, Mode=TwoWay}">
+                                        <b:Interaction.Triggers>
+                                            <b:EventTrigger EventName="SelectionChanged">
+                                                <b:InvokeCommandAction Command="{Binding DataContext.TrackChangedCommand, RelativeSource={RelativeSource AncestorType=local:MainWindow}}" />
+                                            </b:EventTrigger>
+                                        </b:Interaction.Triggers>
+                                    </ComboBox>
                                 </DockPanel>
 
                                 <DockPanel Margin="0 0 0 20" >
-                                    <materialDesign:PackIcon Kind="VolumeVibrate" Width="22" Height="22" 
+                                    <materialDesign:PackIcon Kind="GuitarElectric" Width="22" Height="22" 
                                                              VerticalAlignment="Center" DockPanel.Dock="Left" />
 
-                                    <ComboBox ItemsSource="{x:Static context:Instrument.All}" 
+                                    <ComboBox ItemsSource="{Binding InstrumentCategory.Instruments}" 
                                               Margin="10 0"
                                               SelectedItem="{Binding Instrument, Mode=TwoWay}">
                                         <b:Interaction.Triggers>
@@ -177,7 +194,7 @@
 
                                     <Slider HorizontalAlignment="Stretch" Value="{Binding Gain}"
                                             Margin="10 0"
-                                            Minimum="0.05" Maximum="1" VerticalAlignment="Center" />
+                                            Minimum="0.05" Maximum="0.1" VerticalAlignment="Center" />
                                 </DockPanel>
 
                             </StackPanel>

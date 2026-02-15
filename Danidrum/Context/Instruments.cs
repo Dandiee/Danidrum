@@ -8,6 +8,8 @@ public class Instrument
     public string Category { get; }
     public string Name { get; }
 
+    
+
     private Instrument(int id, string category, string name)
     {
         Id = id;
@@ -185,4 +187,27 @@ public class Instrument
         };
 
     public static readonly IReadOnlyDictionary<int, Instrument> Mapping = All.ToDictionary(e => e.Id);
+
+    public static readonly IReadOnlyList<string> Categories = All.Select(e => e.Category).Distinct().ToList();
+}
+
+public class InstrumentCategory
+{
+    public string Name { get; }
+    public IReadOnlyList<Instrument> Instruments { get; }
+
+    private InstrumentCategory(string name, IEnumerable<Instrument> instruments)
+    {
+        Name = name;
+        Instruments = instruments.ToList();
+    }
+
+    public static readonly IReadOnlyList<InstrumentCategory> All = Instrument.All
+        .GroupBy(e => e.Category)
+        .Select(e => new InstrumentCategory(e.Key, e))
+        .ToList();
+
+    public static readonly IReadOnlyDictionary<string, InstrumentCategory> Mapping = All.ToDictionary(e => e.Name);
+
+    public override string ToString() => Name;
 }

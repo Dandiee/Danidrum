@@ -14,12 +14,14 @@ public partial class ChunkContext : ObservableObject
     public string InstrumentName { get; }
 
     [ObservableProperty] public Instrument _instrument;
+    [ObservableProperty] public InstrumentCategory _instrumentCategory;
     [ObservableProperty] public bool _useDistortion;
-    [ObservableProperty] public float _drive;
-    [ObservableProperty] public float _gain;
+    [ObservableProperty] public float _drive = 50f;
+    [ObservableProperty] public float _gain = 0.075f;
     [ObservableProperty] private bool _isMuted;
     [ObservableProperty] private float _volume;
 
+    partial void OnInstrumentCategoryChanged(InstrumentCategory value) => Instrument = value.Instruments.First();
 
     public Dictionary<int, LaneContext> LanesMapping;
     public List<TimedNoteEvent> Notes { get; }
@@ -31,7 +33,7 @@ public partial class ChunkContext : ObservableObject
         TrackChunk = trackChunk;
         var instrumentId = trackChunk.Events.OfType<ProgramChangeEvent>().First().ProgramNumber;
         Instrument = Instrument.Mapping[instrumentId];
-
+        InstrumentCategory = InstrumentCategory.Mapping[Instrument.Category];
 
         Name = trackChunk.Events.OfType<SequenceTrackNameEvent>().FirstOrDefault()?.Text ?? "Unknown Track";
         InstrumentName = string.Join(", ", trackChunk.Events.OfType<InstrumentNameEvent>().Select(e => e.Text));

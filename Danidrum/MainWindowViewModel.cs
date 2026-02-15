@@ -8,11 +8,8 @@ using Melanchall.DryWetMidi.Multimedia;
 using System.Windows.Media;
 using Danidrum.AudioEngine;
 using Danidrum.Context;
-using Melanchall.DryWetMidi.Common;
 using Melanchall.DryWetMidi.Core;
 using Microsoft.Win32;
-using NAudio.CoreAudioApi;
-using NAudio.Wave.Asio;
 using ChunkContext = Danidrum.Context.ChunkContext;
 
 namespace Danidrum;
